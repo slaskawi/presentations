@@ -30,7 +30,8 @@ public class UserCreator {
       logger.info("Initializing database");
       insertData();
       queryData();
-      logger.info("Database initialization finished");
+      logger.info("Database initialization finished. Standing by...");
+      while(true);
    }
 
    private void queryData() {

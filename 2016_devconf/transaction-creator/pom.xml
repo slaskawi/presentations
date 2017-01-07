@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.infinispan.microservices</groupId>
-  <artifactId>user-data-creator</artifactId>
+  <artifactId>transaction-creator</artifactId>
   <version>1.0.0-SNAPSHOT</version>
 
   <properties>
@@ -36,10 +36,14 @@
       <artifactId>mysql-connector-java</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.fluttercode.datafactory</groupId>
-      <artifactId>datafactory</artifactId>
-      <version>0.8</version>
-      <type>jar</type>
+      <groupId>org.springframework.kafka</groupId>
+      <artifactId>spring-kafka</artifactId>
+      <version>1.1.1.RELEASE</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.8.5</version>
     </dependency>
   </dependencies>
 
@@ -60,7 +64,7 @@
                   <descriptorRef>artifact-with-dependencies</descriptorRef>
                 </assembly>
                 <entryPoint>
-                  <shell>java -cp "/deployments/*" org.infinispan.microservices.user.Main</shell>
+                  <shell>java -cp "/deployments/*" org.infinispan.microservices.transaction.Main</shell>
                 </entryPoint>
               </build>
             </image>
