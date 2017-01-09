@@ -40,7 +40,7 @@ public class TransactionCreator {
 
    @PostConstruct
    public void init() {
-      scheduler.scheduleAtFixedRate(createTransaction(), 0, 1, TimeUnit.SECONDS);
+      scheduler.scheduleAtFixedRate(createTransaction(), 1, 1, TimeUnit.SECONDS);
    }
 
    private Runnable createTransaction() {

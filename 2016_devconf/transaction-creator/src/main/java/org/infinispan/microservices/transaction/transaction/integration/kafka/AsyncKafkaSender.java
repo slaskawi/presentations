@@ -22,6 +22,9 @@ public class AsyncKafkaSender {
 
    public void sendMessage(String topic, Object message) {
       ListenableFuture<SendResult<String, Object>> future = kafkaTemplate.send("transactions", message);
-      future.addCallback(success -> {}, failure -> logger.error("Could not send message {} to topic {}", message, topic));
+      future.addCallback(success -> {}, failure -> {
+         logger.error("Could not send message " + message + " to topic " + topic);
+         logger.error("Error:", failure.getCause());
+      });
    }
 }

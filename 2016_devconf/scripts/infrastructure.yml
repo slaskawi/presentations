@@ -61,51 +61,6 @@ items:
   data:
     custom.cnf: "[mysqld]\nsql-mode=\"\"\n"
 - apiVersion: "v1"
-  kind: "ConfigMap"
-  metadata:
-    labels:
-      environment: "infrastructure"
-      project: "mysql"
-      version: "0.1.5"
-    name: "mysql-initdb"
-  data:
-    init.sql: "CREATE TABLE IF NOT EXISTS zipkin_spans (\n  `trace_id` BIGINT NOT\
-      \ NULL,\n  `id` BIGINT NOT NULL,\n  `name` VARCHAR(255) NOT NULL,\n  `parent_id`\
-      \ BIGINT,\n  `debug` BIT(1),\n  `start_ts` BIGINT COMMENT 'Span.timestamp():\
-      \ epoch micros used for endTs query and to implement TTL',\n  `duration` BIGINT\
-      \ COMMENT 'Span.duration(): micros used for minDuration and maxDuration query'\n\
-      ) ENGINE=InnoDB ROW_FORMAT=COMPRESSED;\n\nALTER TABLE zipkin_spans ADD UNIQUE\
-      \ KEY(`trace_id`, `id`) COMMENT 'ignore insert on duplicate';\nALTER TABLE zipkin_spans\
-      \ ADD INDEX(`trace_id`, `id`) COMMENT 'for joining with zipkin_annotations';\n\
-      ALTER TABLE zipkin_spans ADD INDEX(`trace_id`) COMMENT 'for getTracesByIds';\n\
-      ALTER TABLE zipkin_spans ADD INDEX(`name`) COMMENT 'for getTraces and getSpanNames';\n\
-      ALTER TABLE zipkin_spans ADD INDEX(`start_ts`) COMMENT 'for getTraces ordering\
-      \ and range';\n\nCREATE TABLE IF NOT EXISTS zipkin_annotations (\n  `trace_id`\
-      \ BIGINT NOT NULL COMMENT 'coincides with zipkin_spans.trace_id',\n  `span_id`\
-      \ BIGINT NOT NULL COMMENT 'coincides with zipkin_spans.id',\n  `a_key` VARCHAR(255)\
-      \ NOT NULL COMMENT 'BinaryAnnotation.key or Annotation.value if type == -1',\n\
-      \  `a_value` BLOB COMMENT 'BinaryAnnotation.value(), which must be smaller than\
-      \ 64KB',\n  `a_type` INT NOT NULL COMMENT 'BinaryAnnotation.type() or -1 if\
-      \ Annotation',\n  `a_timestamp` BIGINT COMMENT 'Used to implement TTL; Annotation.timestamp\
-      \ or zipkin_spans.timestamp',\n  `endpoint_ipv4` INT COMMENT 'Null when Binary/Annotation.endpoint\
-      \ is null',\n  `endpoint_ipv6` BINARY(16) COMMENT 'Null when Binary/Annotation.endpoint\
-      \ is null, or no IPv6 address',\n  `endpoint_port` SMALLINT COMMENT 'Null when\
-      \ Binary/Annotation.endpoint is null',\n  `endpoint_service_name` VARCHAR(255)\
-      \ COMMENT 'Null when Binary/Annotation.endpoint is null'\n) ENGINE=InnoDB ROW_FORMAT=COMPRESSED;\n\
-      \nALTER TABLE zipkin_annotations ADD UNIQUE KEY(`trace_id`, `span_id`, `a_key`,\
-      \ `a_timestamp`) COMMENT 'Ignore insert on duplicate';\nALTER TABLE zipkin_annotations\
-      \ ADD INDEX(`trace_id`, `span_id`) COMMENT 'for joining with zipkin_spans';\n\
-      ALTER TABLE zipkin_annotations ADD INDEX(`trace_id`) COMMENT 'for getTraces/ByIds';\n\
-      ALTER TABLE zipkin_annotations ADD INDEX(`endpoint_service_name`) COMMENT 'for\
-      \ getTraces and getServiceNames';\nALTER TABLE zipkin_annotations ADD INDEX(`a_type`)\
-      \ COMMENT 'for getTraces';\nALTER TABLE zipkin_annotations ADD INDEX(`a_key`)\
-      \ COMMENT 'for getTraces';\n\nCREATE TABLE IF NOT EXISTS zipkin_dependencies\
-      \ (\n  `day` DATE NOT NULL,\n  `parent` VARCHAR(255) NOT NULL,\n  `child` VARCHAR(255)\
-      \ NOT NULL,\n  `call_count` BIGINT\n) ENGINE=InnoDB ROW_FORMAT=COMPRESSED;\n\
-      \nALTER TABLE zipkin_dependencies ADD UNIQUE KEY(`day`, `parent`, `child`);\n\
-      GRANT SELECT, INSERT, UPDATE, DELETE ON zipkin.* TO zipkin@'%' IDENTIFIED BY\
-      \ 'zipkin' WITH GRANT OPTION ;\nFLUSH PRIVILEGES;\n"
-- apiVersion: "v1"
   kind: "DeploymentConfig"
   metadata:
     labels:
@@ -215,16 +170,11 @@ items:
               cpu: "0"
               memory: "0"
           volumeMounts:
-          - mountPath: "/docker-entrypoint-initdb.d/"
-            name: "mysql-init-script"
           - mountPath: "/etc/mysql/conf.d/"
             name: "mysql-confd"
           - mountPath: "/var/lib/mysql/"
             name: "data"
         volumes:
-        - configMap:
-            name: "mysql-initdb"
-          name: "mysql-init-script"
         - configMap:
             name: "mysql-cnf"
           name: "mysql-confd"
