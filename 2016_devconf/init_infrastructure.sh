@@ -2,6 +2,8 @@
 
 set -e -x
 
-oc create -f ./scripts/infrastructure.yml
-mvn clean fabric8:deploy -pl user-data-creator
-mvn clean fabric8:deploy -pl transaction-creator
+oc policy add-role-to-user view system:serviceaccount:myproject:default -n myproject || true
+oc create configmap transactions-configuration --from-file=./scripts/transactions.xml  || true
+oc create -f ./scripts/infrastructure.yml || true
+mvn clean install fabric8:deploy -pl user-data-creator -am
+#mvn clean fabric8:deploy -pl transaction-creator

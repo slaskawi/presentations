@@ -22,16 +22,18 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.infinispan</groupId>
+                <artifactId>infinispan-bom</artifactId>
+                <version>9.0.0.Alpha4</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-parent</artifactId>
                 <version>${version.spring.boot}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.infinispan</groupId>
-                <artifactId>infinispan-bom</artifactId>
-                <version>8.2.5.Final</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -39,6 +41,7 @@
     <modules>
         <module>transaction-creator</module>
         <module>user-data-creator</module>
+        <module>antifroud-checker</module>
     </modules>
 
     <build>

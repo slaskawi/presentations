@@ -3,9 +3,11 @@ package org.infinispan.microservices.transaction.transaction;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.Currency;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -13,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 
-import org.infinispan.microservices.transaction.transaction.integration.kafka.AsyncKafkaSender;
+import org.infinispan.microservices.transaction.transaction.integration.infinispan.TransactionSender;
 import org.infinispan.microservices.transaction.user.UserData;
 import org.infinispan.microservices.transaction.user.UserGrabber;
 import org.slf4j.Logger;
@@ -31,11 +33,11 @@ public class TransactionCreator {
    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(POOL_SIZE);
 
    private final UserGrabber userGrabber;
-   private final AsyncKafkaSender kafkaSender;
+   private final TransactionSender transactionSender;
 
-   public TransactionCreator(UserGrabber userGrabber, AsyncKafkaSender kafkaSender) {
+   public TransactionCreator(UserGrabber userGrabber, TransactionSender transactionSender) {
       this.userGrabber = userGrabber;
-      this.kafkaSender = kafkaSender;
+      this.transactionSender = transactionSender;
    }
 
    @PostConstruct
@@ -51,17 +53,17 @@ public class TransactionCreator {
                String pan = getRandomPan();
                String firstName = user.get().getFirstName();
                String lastName = user.get().getLastName();
-               BigDecimal amount = new BigDecimal(ThreadLocalRandom.current().nextInt(0, 999999));
+               BigDecimal amount = new BigDecimal(ThreadLocalRandom.current().nextDouble(0, 9999)).setScale(2, BigDecimal.ROUND_UP);
                Currency currency = getRandomCurrency();
                LocalDate cardExpirationDate = LocalDate.now().plusMonths(ThreadLocalRandom.current().nextInt(0, 512));
 
                String ip = getRandomIp();
                String country = getRandomCountry();
 
-               Transaction transaction = new Transaction(pan, firstName, lastName, cardExpirationDate, amount, currency);
-               transaction.setIp(ip);
-               transaction.setCountry(country);
-               kafkaSender.sendMessage(TRANSACTION_TOPIC, transaction);
+               ZonedDateTime transactionTime = ZonedDateTime.now();
+               String correlationId = UUID.randomUUID().toString();
+               Transaction transaction = new Transaction(correlationId, transactionTime, pan, firstName, lastName, cardExpirationDate, amount, currency, ip, country);
+               transactionSender.send(transaction);
                logger.info("Created transaction: {}", transaction);
             } else {
                logger.info("No user data for transaction. Waiting...");

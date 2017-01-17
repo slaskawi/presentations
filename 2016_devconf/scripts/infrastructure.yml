@@ -7,23 +7,6 @@ items:
   metadata:
     labels:
       environment: "infrastructure"
-      project: "kafka"
-      version: "2.2.168"
-    name: "kafka"
-  spec:
-    ports:
-    - port: 9092
-      protocol: "TCP"
-      targetPort: 9092
-    selector:
-      environment: "infrastructure"
-      project: "kafka"
-    type: "LoadBalancer"
-- apiVersion: "v1"
-  kind: "Service"
-  metadata:
-    labels:
-      environment: "infrastructure"
       project: "mysql"
     name: "mysql"
   spec:
@@ -36,21 +19,6 @@ items:
       project: "mysql"
     type: "LoadBalancer"
 - apiVersion: "v1"
-  kind: "Service"
-  metadata:
-    labels:
-      environment: "infrastructure"
-      project: "zookeeper"
-    name: "zookeeper"
-  spec:
-    ports:
-    - name: "client"
-      port: 2181
-      targetPort: 2181
-    selector:
-      project: "zookeeper"
-      environment: "infrastructure"
-- apiVersion: "v1"
   kind: "ConfigMap"
   metadata:
     labels:
@@ -60,64 +28,6 @@ items:
     name: "mysql-cnf"
   data:
     custom.cnf: "[mysqld]\nsql-mode=\"\"\n"
-- apiVersion: "v1"
-  kind: "DeploymentConfig"
-  metadata:
-    labels:
-      environment: "infrastructure"
-      project: "kafka"
-      version: "2.2.168"
-    name: "kafka"
-  spec:
-    replicas: 1
-    selector:
-      environment: "infrastructure"
-      project: "kafka"
-      version: "2.2.168"
-    strategy:
-      rollingParams:
-        timeoutSeconds: 10800
-      type: "Rolling"
-    template:
-      metadata:
-        labels:
-          environment: "infrastructure"
-          project: "kafka"
-          version: "2.2.168"
-      spec:
-        containers:
-        - env:
-          - name: "KUBERNETES_NAMESPACE"
-            valueFrom:
-              fieldRef:
-                fieldPath: "metadata.namespace"
-          image: "fabric8/kafka:2.2.168"
-          imagePullPolicy: "IfNotPresent"
-          name: "kafka"
-          ports:
-          - containerPort: 9092
-            name: "kafka"
-          - containerPort: 8778
-            name: "jolokia"
-          resources:
-            limits:
-              cpu: "0"
-              memory: "0"
-            requests:
-              cpu: "0"
-              memory: "0"
-          securityContext:
-            privileged: false
-          volumeMounts:
-          - mountPath: "/opt/kafka/logs"
-            name: "logs"
-            readOnly: false
-        volumes:
-        - emptyDir:
-            medium: "Memory"
-          name: "logs"
-    triggers:
-    - type: "ConfigChange"
 - apiVersion: "v1"
   kind: "DeploymentConfig"
   metadata:
@@ -183,70 +93,107 @@ items:
           name: "data"
     triggers:
     - type: "ConfigChange"
-- apiVersion: "v1"
-  kind: "DeploymentConfig"
+- apiVersion: v1
+  kind: DeploymentConfig
   metadata:
     labels:
       environment: "infrastructure"
-      project: "zookeeper"
-      version: "2.2.153"
-      serverId: "1"
-    name: "zookeeper"
+      project: "infinispan"
+      version: "9.0.0.Alpha4"
+    name: transactions-repository
   spec:
     replicas: 1
     selector:
       environment: "infrastructure"
-      project: "zookeeper"
-      version: "2.2.153"
-    strategy:
-      rollingParams:
-        timeoutSeconds: 10800
-      type: "Rolling"
+      project: "infinispan"
+      version: "9.0.0.Alpha4"
     template:
       metadata:
         labels:
           environment: "infrastructure"
-          project: "zookeeper"
-          version: "2.2.153"
+          project: "infinispan"
+          version: "9.0.0.Alpha4"
       spec:
         containers:
-        - env:
-          - name: "ENSEMBLE_SIZE"
-            value: "1"
-          - name: "KUBERNETES_NAMESPACE"
-            valueFrom:
-              fieldRef:
-                fieldPath: "metadata.namespace"
-          image: "fabric8/zookeeper:2.2.153"
-          imagePullPolicy: "IfNotPresent"
-          name: "zookeeper"
+        - args:
+          - custom/transactions
+          - -Djboss.default.jgroups.stack=kubernetes
+          image: jboss/infinispan-server:9.0.0.Alpha4
+          imagePullPolicy: Always
+          name: infinispan-server
           ports:
-          - containerPort: 2181
-            name: "zkclient"
-          - containerPort: 8778
-            name: "jolokia"
-          resources:
-            limits:
-              cpu: "0"
-              memory: "0"
-            requests:
-              cpu: "0"
-              memory: "0"
-          securityContext:
-            privileged: false
+          - containerPort: 8181
+            protocol: TCP
+          - containerPort: 8888
+            protocol: TCP
+          - containerPort: 9990
+            protocol: TCP
+          - containerPort: 11211
+            protocol: TCP
+          - containerPort: 11222
+            protocol: TCP
+          - containerPort: 57600
+            protocol: TCP
+          - containerPort: 7600
+            protocol: TCP
+          - containerPort: 8080
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
           volumeMounts:
-          - mountPath: "/opt/zookeeper/data"
-            name: "data"
-            readOnly: false
-          - mountPath: "/opt/zookeeper/log"
-            name: "log"
-            readOnly: false
+          - mountPath: /opt/jboss/infinispan-server/standalone/configuration/custom
+            name: config-volume
+        restartPolicy: Always
         volumes:
-        - emptyDir:
-            medium: "Memory"
-          name: "data"
-        - emptyDir:
-            medium: "Memory"
-          name: "log"
+        - configMap:
+            name: transactions-configuration
+          name: config-volume
     triggers:
-    - type: "ConfigChange"
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      environment: infrastructure
+      project: infinispan
+      version: 9.0.0.Alpha4
+    name: transactions-repository
+  spec:
+    ports:
+    - name: port-1
+      port: 8181
+      protocol: TCP
+      targetPort: 8181
+    - name: port-2
+      port: 8888
+      protocol: TCP
+      targetPort: 8888
+    - name: port-3
+      port: 9990
+      protocol: TCP
+      targetPort: 9990
+    - name: port-4
+      port: 11211
+      protocol: TCP
+      targetPort: 11211
+    - name: port-5
+      port: 11222
+      protocol: TCP
+      targetPort: 11222
+    - name: port-6
+      port: 57600
+      protocol: TCP
+      targetPort: 57600
+    - name: port-7
+      port: 7600
+      protocol: TCP
+      targetPort: 7600
+    - name: port-8
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      environment: infrastructure
+      project: infinispan
+      version: 9.0.0.Alpha4
+    sessionAffinity: None
+    type: ClusterIP
