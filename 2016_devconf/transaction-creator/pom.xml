@@ -13,7 +13,7 @@
 
   <properties>
     <fabric8.docker.plugin.skip>false</fabric8.docker.plugin.skip>
-    <docker.main.class>org.infinispan.microservices.transaction.Main</docker.main.class>
+    <docker.main.class>org.infinispan.microservices.Main</docker.main.class>
   </properties>
 
   <dependencies>
