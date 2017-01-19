@@ -3,11 +3,14 @@ package org.infinispan.microservices.user.service;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.infinispan.microservices.user.model.UserData;
 import org.infinispan.microservices.user.repository.UserRepository;
+import org.infinispan.microservices.util.WaitUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,8 +24,13 @@ public class UserGrabber {
       this.userRepository = userRepository;
    }
 
+//   @Timed
+   @Cacheable(cacheNames = "test")
    public Optional<UserData> getUser(String firstName, String lastName) {
       List<UserData> userDatas = userRepository.findByFirstNameAndLastName(firstName, lastName);
+
+      WaitUtils.waitRandom(5, TimeUnit.SECONDS);
+
       if(userDatas.size() == 1) {
          return Optional.of(userDatas.get(0));
       } else if(userDatas.isEmpty()) {

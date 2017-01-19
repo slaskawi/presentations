@@ -6,9 +6,7 @@ import java.time.format.DateTimeFormatter;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.microservices.transaction.model.Transaction;
-import org.springframework.stereotype.Service;
 
-@Service
 public class TransactionSender {
 
    public static final String CACHE_FOR_TRANSACTIONS = "transactions_for_antifraud_check";

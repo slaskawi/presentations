@@ -8,9 +8,7 @@ import org.infinispan.microservices.user.model.UserData;
 import org.infinispan.microservices.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 
-@Service
 public class UserGrabber {
 
    private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());

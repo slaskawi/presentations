@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserCreator {
 
-   private static final int NUMBER_OF_ENTRIES = 10000;
+   private static final int NUMBER_OF_ENTRIES = 1000;
    private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
    private final UserRepository userRepository;

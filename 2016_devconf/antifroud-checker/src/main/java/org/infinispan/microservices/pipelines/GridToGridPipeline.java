@@ -2,40 +2,60 @@ package org.infinispan.microservices.pipelines;
 
 import java.util.concurrent.CompletableFuture;
 
-import javax.annotation.PostConstruct;
-
 import org.infinispan.microservices.antifraud.service.AntiFraudQueryProcessor;
+import org.infinispan.microservices.caching.CacheInspector;
 import org.infinispan.microservices.transaction.model.Transaction;
 import org.infinispan.microservices.transaction.service.AntiFraudResultSender;
 import org.infinispan.microservices.transaction.service.AntifraudQueryMapper;
 import org.infinispan.microservices.transaction.service.AsyncTransactionReceiver;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class GridToGridPipeline {
 
-   private final AsyncTransactionReceiver transactionReceiver;
-   private final AntifraudQueryMapper queryMapper;
-   private final AntiFraudQueryProcessor processor;
-   private final AntiFraudResultSender resultSender;
+   @Autowired
+   private AsyncTransactionReceiver transactionReceiver;
 
-   public GridToGridPipeline(AsyncTransactionReceiver transactionReceiver, AntifraudQueryMapper queryMapper, AntiFraudQueryProcessor processor, AntiFraudResultSender resultSender) {
-      this.transactionReceiver = transactionReceiver;
-      this.queryMapper = queryMapper;
-      this.processor = processor;
-      this.resultSender = resultSender;
-   }
+   @Autowired
+   private AntifraudQueryMapper queryMapper;
 
-   @PostConstruct
+   @Autowired
+   private AntiFraudQueryProcessor processor;
+
+   @Autowired
+   private AntiFraudResultSender resultSender;
+
+   @Autowired
+   private CacheInspector cacheInspector;
+
    public void processData() throws InterruptedException {
+
+      System.out.println("1");
+      cacheInspector.testCaching();
+      System.out.println("2");
+      cacheInspector.testCaching();
+      System.out.println("3");
+      cacheInspector.testCaching();
+      System.out.println("4");
+      cacheInspector.testCaching();
+
       while(true) {
          CompletableFuture<Transaction> transactionToBeProcessed = transactionReceiver.getTransactionQueue().take();
+
          transactionToBeProcessed
-               .thenApply(queryMapper.toAntiFraudQuery())
-               .thenApply(processor.process())
-               .thenAccept(resultSender.sendResults());
+               .thenApply(transaction -> queryMapper.toAntiFraudQuery(transaction))
+               .thenApply(antiFraudQueryData -> processor.process(antiFraudQueryData))
+               .thenAccept(antiFraudResponseData -> {
+                  cacheInspector.printOutCacheContent();
+                  resultSender.sendResults(antiFraudResponseData);
+               });
+
+
       }
    }
+
+
 
 
 }

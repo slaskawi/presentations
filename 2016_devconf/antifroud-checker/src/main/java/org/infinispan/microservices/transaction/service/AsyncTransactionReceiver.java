@@ -17,9 +17,7 @@ import org.infinispan.client.hotrod.annotation.ClientListener;
 import org.infinispan.client.hotrod.event.ClientCacheEntryCreatedEvent;
 import org.infinispan.commons.util.CloseableIterator;
 import org.infinispan.microservices.transaction.model.Transaction;
-import org.springframework.stereotype.Service;
 
-@Service
 @ClientListener
 public class AsyncTransactionReceiver {
 
