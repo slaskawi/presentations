@@ -3,7 +3,7 @@
     <logger name="org.infinispan.microservices.antifraud.service.AntiFraudQueryProcessor" level="DEBUG"/>
 
     <!-- Log Cache content -->
-    <logger name="org.infinispan.microservices.caching.CacheInspector" level="INFO"/>
+    <logger name="org.infinispan.microservices.caching.CacheInspector" level="DEBUG"/>
 
 
     <!-- Other, non-relevant stuff -->
