@@ -18,11 +18,35 @@
 
   <dependencies>
     <!-- Spring Boot JPA -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
     <!-- MySQL Driver -->
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+    </dependency>
     <!-- Spring Boot AOP -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
     <!-- Infinispan Starter for Spring Boot -->
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>inifinispan-spring-boot-starter</artifactId>
+    </dependency>
     <!-- Infinispan Core for embedded cluster -->
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-core</artifactId>
+    </dependency>
     <!-- Infinispan-Spring integration -->
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-spring4-embedded</artifactId>
+    </dependency>
   </dependencies>
 
 </project>
