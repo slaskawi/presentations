@@ -138,6 +138,9 @@ items:
             protocol: TCP
           - containerPort: 8080
             protocol: TCP
+          env:
+          - name: OPENSHIFT_KUBE_PING_NAMESPACE
+            valueFrom: {fieldRef: {apiVersion: v1, fieldPath: metadata.namespace}}
           terminationMessagePath: /dev/termination-log
           volumeMounts:
           - mountPath: /opt/jboss/infinispan-server/standalone/configuration/custom

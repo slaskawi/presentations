@@ -1,9 +1,9 @@
-package org.infinispan.microservices.transaction.configuration;
+package org.infinispan.microservices.transactions.configuration;
 
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
-import org.infinispan.microservices.transaction.service.TransactionCreator;
-import org.infinispan.microservices.transaction.service.TransactionSender;
+import org.infinispan.microservices.transactions.service.TransactionCreator;
+import org.infinispan.microservices.transactions.service.TransactionSender;
 import org.infinispan.microservices.user.service.UserGrabber;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

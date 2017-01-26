@@ -8,9 +8,9 @@ import org.springframework.context.ConfigurableApplicationContext;
 @SpringBootApplication
 public class Main {
 
-   public static void main(String[] args) throws InterruptedException {
+   public static void main(String[] args) throws Exception {
       ConfigurableApplicationContext run = SpringApplication.run(Main.class, args);
-      GridToGridPipeline bean = run.getBean(GridToGridPipeline.class);
-      bean.processData();
+      GridToGridPipeline pipeline = run.getBean(GridToGridPipeline.class);
+      pipeline.processData();
    }
 }

@@ -1,4 +1,4 @@
-package org.infinispan.microservices.transaction.model;
+package org.infinispan.microservices.transactions.model;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.infinispan.commons.marshall.AdvancedExternalizer;
 
+//https://www.quora.com/Can-businesses-use-credit-card-data-for-customer-analytics
 public class Transaction implements AdvancedExternalizer<Transaction> {
 
    private final String correlationId;

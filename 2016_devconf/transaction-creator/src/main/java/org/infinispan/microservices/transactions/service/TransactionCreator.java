@@ -1,4 +1,4 @@
-package org.infinispan.microservices.transaction.service;
+package org.infinispan.microservices.transactions.service;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 
-import org.infinispan.microservices.transaction.model.Transaction;
+import org.infinispan.microservices.transactions.model.Transaction;
 import org.infinispan.microservices.user.model.UserData;
 import org.infinispan.microservices.user.service.UserGrabber;
 import org.slf4j.Logger;

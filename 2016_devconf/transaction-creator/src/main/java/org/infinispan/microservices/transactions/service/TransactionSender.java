@@ -1,11 +1,11 @@
-package org.infinispan.microservices.transaction.service;
+package org.infinispan.microservices.transactions.service;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
-import org.infinispan.microservices.transaction.model.Transaction;
+import org.infinispan.microservices.transactions.model.Transaction;
 
 public class TransactionSender {
 

@@ -11,8 +11,7 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <!--<version.spring.boot>1.4.0.RELEASE</version.spring.boot>-->
-        <version.spring.boot>1.3.8.RELEASE</version.spring.boot>
+        <version.spring.boot>1.4.3.RELEASE</version.spring.boot>
         <fabric8.build.strategy>docker</fabric8.build.strategy>
         <fabric8-maven-plugin.version>3.2.8</fabric8-maven-plugin.version>
 
@@ -25,7 +24,7 @@
             <dependency>
                 <groupId>org.infinispan</groupId>
                 <artifactId>infinispan-bom</artifactId>
-                <version>9.0.0.Alpha4</version>
+                <version>9.0.0.Beta2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -35,6 +34,11 @@
                 <version>${version.spring.boot}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.infinispan</groupId>
+                <artifactId>inifinispan-spring-boot-starter</artifactId>
+                <version>1.0.0.Alpha1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -68,7 +72,7 @@
                                     <descriptorRef>artifact-with-dependencies</descriptorRef>
                                 </assembly>
                                 <entryPoint>
-                                    <shell>java -cp "/deployments/*" ${docker.main.class}</shell>
+                                    <shell>java -cp "/deployments/*" -Djava.net.preferIPv4Stack=true ${docker.main.class}</shell>
                                 </entryPoint>
                             </build>
                         </image>

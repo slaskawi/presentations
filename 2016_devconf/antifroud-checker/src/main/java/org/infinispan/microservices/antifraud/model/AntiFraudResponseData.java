@@ -10,6 +10,14 @@ public class AntiFraudResponseData {
       this.scoring = scoring;
    }
 
+   public String getTransactionId() {
+      return transactionId;
+   }
+
+   public int getScoring() {
+      return scoring;
+   }
+
    @Override
    public String toString() {
       return "AntiFraudResponseData{" +

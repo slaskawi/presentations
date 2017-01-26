@@ -1,10 +1,13 @@
-package org.infinispan.microservices.transaction.configuration;
+package org.infinispan.microservices.transactions.configuration;
 
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
-import org.infinispan.microservices.transaction.service.AntiFraudResultSender;
-import org.infinispan.microservices.transaction.service.AntifraudQueryMapper;
-import org.infinispan.microservices.transaction.service.AsyncTransactionReceiver;
+import org.infinispan.microservices.transactions.service.AntiFraudResultSender;
+import org.infinispan.microservices.transactions.service.AntifraudQueryMapper;
+import org.infinispan.microservices.transactions.service.AsyncTransactionReceiver;
+import org.infinispan.microservices.transactions.service.AntiFraudResultSender;
+import org.infinispan.microservices.transactions.service.AntifraudQueryMapper;
+import org.infinispan.microservices.transactions.service.AsyncTransactionReceiver;
 import org.infinispan.microservices.user.service.UserGrabber;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -31,8 +34,8 @@ public class TransactionConfiguration {
    }
 
    @Bean
-   public AntiFraudResultSender antiFraudResultSender() {
-      return new AntiFraudResultSender();
+   public AntiFraudResultSender antiFraudResultSender(RemoteCacheManager remoteCacheManager) {
+      return new AntiFraudResultSender(remoteCacheManager);
    }
 
    @Bean

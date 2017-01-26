@@ -10,12 +10,14 @@ public class TransactionInfo {
    private final ZonedDateTime transactionTime;
    private final BigDecimal amount;
    private final Currency currency;
+   private final String ip;
 
-   public TransactionInfo(String transactionId, ZonedDateTime transactionTime, BigDecimal amount, Currency currency) {
+   public TransactionInfo(String transactionId, ZonedDateTime transactionTime, BigDecimal amount, Currency currency, String ip) {
       this.transactionId = transactionId;
       this.transactionTime = transactionTime;
       this.amount = amount;
       this.currency = currency;
+      this.ip = ip;
    }
 
    public String getTransactionId() {
@@ -34,6 +36,10 @@ public class TransactionInfo {
       return currency;
    }
 
+   public String getIp() {
+      return ip;
+   }
+
    @Override
    public String toString() {
       return "TransactionInfo{" +
@@ -41,6 +47,7 @@ public class TransactionInfo {
             ", transactionTime=" + transactionTime +
             ", amount=" + amount +
             ", currency=" + currency +
+            ", ip='" + ip + '\'' +
             '}';
    }
 }
