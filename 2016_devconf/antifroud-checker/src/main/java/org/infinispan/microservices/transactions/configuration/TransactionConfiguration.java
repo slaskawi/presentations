@@ -21,12 +21,11 @@ public class TransactionConfiguration {
    @Value("${spring.infinispan.server}")
    private String infinispanAddress;
 
-   @Bean
-   public InfinispanRemoteConfigurer infinispanRemoteConfigurer() {
-      return () -> new ConfigurationBuilder()
-            .addServers(infinispanAddress)
-            .build();
-   }
+   // Use Infinispan Spring Starter:
+   // - use infinispanAddress to create InfinispanRemoteConfigurer
+   // - use ConfigurationBuilder!
+
+   // End of Spring + Infinispan Remote Configuration
 
    @Bean
    public AntifraudQueryMapper antifraudQueryMapper(UserGrabber userGrabber) {
