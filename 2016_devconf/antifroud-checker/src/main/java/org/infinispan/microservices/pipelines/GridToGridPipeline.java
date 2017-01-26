@@ -3,7 +3,6 @@ package org.infinispan.microservices.pipelines;
 import java.util.concurrent.ExecutionException;
 
 import org.infinispan.microservices.antifraud.service.AntiFraudQueryProcessor;
-import org.infinispan.microservices.caching.CacheInspector;
 import org.infinispan.microservices.transactions.service.AntiFraudResultSender;
 import org.infinispan.microservices.transactions.service.AntifraudQueryMapper;
 import org.infinispan.microservices.transactions.service.AsyncTransactionReceiver;
@@ -25,9 +24,6 @@ public class GridToGridPipeline {
    @Autowired
    private AntiFraudResultSender resultSender;
 
-   @Autowired
-   private CacheInspector cacheInspector;
-
    public void processData() throws InterruptedException, ExecutionException {
       while(true) {
          transactionReceiver.getTransactionQueue().take()
@@ -35,7 +31,6 @@ public class GridToGridPipeline {
                .thenApply(antiFraudQueryData -> processor.process(antiFraudQueryData))
                .thenAccept(antiFraudResponseData -> {
                   //print out cache content
-                  cacheInspector.printOutCacheContent();
                   resultSender.sendResults(antiFraudResponseData);
                }).get();
       }
