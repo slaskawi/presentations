@@ -25,6 +25,11 @@ public class TransactionConfiguration {
    // - use infinispanAddress to create InfinispanRemoteConfigurer
    // - use ConfigurationBuilder!
 
+   @Bean
+   public InfinispanRemoteConfigurer infinispanRemoteConfigurer() {
+      return () -> new ConfigurationBuilder().addServers(infinispanAddress).build();
+   }
+
    // End of Spring + Infinispan Remote Configuration
 
    @Bean

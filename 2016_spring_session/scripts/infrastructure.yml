@@ -1,0 +1,139 @@
+---
+apiVersion: "v1"
+kind: "List"
+items:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      environment: "infrastructure"
+      project: "infinispan"
+      version: "9.0.0.Beta2"
+    name: transactions-repository
+  spec:
+    replicas: 3
+    strategy:
+      type: Rolling
+      rollingParams:
+        updatePeriodSeconds: 20
+        intervalSeconds: 20
+        timeoutSeconds: 600
+        maxUnavailable: 1
+        maxSurge: 1
+    selector:
+      environment: "infrastructure"
+      project: "infinispan"
+      version: "9.0.0.Beta2"
+    template:
+      metadata:
+        labels:
+          environment: "infrastructure"
+          project: "infinispan"
+          version: "9.0.0.Beta2"
+      spec:
+        containers:
+        - args:
+          - custom/transactions
+          - -Djboss.default.jgroups.stack=kubernetes
+          image: jboss/infinispan-server:9.0.0.Beta2
+          imagePullPolicy: Always
+          name: infinispan-server
+          ports:
+          - containerPort: 8181
+            protocol: TCP
+          - containerPort: 8888
+            protocol: TCP
+          - containerPort: 9990
+            protocol: TCP
+          - containerPort: 11211
+            protocol: TCP
+          - containerPort: 11222
+            protocol: TCP
+          - containerPort: 57600
+            protocol: TCP
+          - containerPort: 7600
+            protocol: TCP
+          - containerPort: 8080
+            protocol: TCP
+          env:
+          - name: OPENSHIFT_KUBE_PING_NAMESPACE
+            valueFrom: {fieldRef: {apiVersion: v1, fieldPath: metadata.namespace}}
+          - name: JAVA_OPTS
+            value: "-server -Xms1G -Xmx1G -XX:+UseConcMarkSweepGC -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -XX:+PrintGC"
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /opt/jboss/infinispan-server/standalone/configuration/custom
+            name: config-volume
+          livenessProbe:
+            exec:
+              command:
+              - /usr/local/bin/is_running.sh
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 2
+          readinessProbe:
+             exec:
+                command:
+                - /usr/local/bin/is_healthy.sh
+             initialDelaySeconds: 30
+             timeoutSeconds: 30
+             periodSeconds: 10
+             successThreshold: 3
+             failureThreshold: 2
+        restartPolicy: Always
+        volumes:
+        - configMap:
+            name: transactions-configuration
+          name: config-volume
+    triggers:
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      environment: infrastructure
+      project: infinispan
+      version: 9.0.0.Beta2
+    name: transactions-repository
+  spec:
+    ports:
+    - name: port-1
+      port: 8181
+      protocol: TCP
+      targetPort: 8181
+    - name: port-2
+      port: 8888
+      protocol: TCP
+      targetPort: 8888
+    - name: port-3
+      port: 9990
+      protocol: TCP
+      targetPort: 9990
+    - name: port-4
+      port: 11211
+      protocol: TCP
+      targetPort: 11211
+    - name: port-5
+      port: 11222
+      protocol: TCP
+      targetPort: 11222
+    - name: port-6
+      port: 57600
+      protocol: TCP
+      targetPort: 57600
+    - name: port-7
+      port: 7600
+      protocol: TCP
+      targetPort: 7600
+    - name: port-8
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      environment: infrastructure
+      project: infinispan
+      version: 9.0.0.Beta2
+    sessionAffinity: None
+    type: ClusterIP
