@@ -66,6 +66,7 @@ public class AsyncTransactionReceiver {
    public void receiveEntryAsync(ClientCacheEntryCreatedEvent event) throws InterruptedException {
       transactionQueue.put(CompletableFuture.supplyAsync(() -> {
          Transaction transaction = remoteCache.get(event.getKey());
+         //FIXME: NPE here? oh noooooo...
          remoteCache.removeAsync(event.getKey());
          return transaction;
       }, executorService));
