@@ -2,9 +2,7 @@ package org.infinispan.microservices;
 
 import java.util.concurrent.TimeUnit;
 
-import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.microservices.sessions.SessionsServlet;
-import org.infinispan.spring.provider.SpringRemoteCacheManager;
 import org.infinispan.spring.session.configuration.EnableInfinispanRemoteHttpSession;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -21,14 +19,6 @@ public class Main {
    public static void main(String[] args) throws Exception {
       ConfigurableApplicationContext run = SpringApplication.run(Main.class, args);
       TimeUnit.DAYS.sleep(1000);
-   }
-
-   /**
-    * We need to to create a Spring Remote Cache Manager. It will be automated in the future: https://issues.jboss.org/browse/ISPN-7468
-    */
-   @Bean
-   public SpringRemoteCacheManager springCache(RemoteCacheManager remoteCacheManager) {
-      return new SpringRemoteCacheManager(remoteCacheManager);
    }
 
    /**

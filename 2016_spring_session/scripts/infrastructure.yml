@@ -68,18 +68,18 @@ items:
             exec:
               command:
               - /usr/local/bin/is_running.sh
-            initialDelaySeconds: 30
-            timeoutSeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 20
+            timeoutSeconds: 20
+            periodSeconds: 15
             successThreshold: 1
             failureThreshold: 2
           readinessProbe:
              exec:
                 command:
                 - /usr/local/bin/is_healthy.sh
-             initialDelaySeconds: 30
-             timeoutSeconds: 30
-             periodSeconds: 10
+             initialDelaySeconds: 20
+             timeoutSeconds: 20
+             periodSeconds: 15
              successThreshold: 3
              failureThreshold: 2
         restartPolicy: Always

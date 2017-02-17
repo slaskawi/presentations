@@ -357,7 +357,7 @@
                     <protocol type="FD_ALL">
                         <!-- The timeout after which we suspect P -->
                         <!-- Needs to be much larger than GC -->
-                        <!-- Let's use 10 * 0.8s (GC) = 2.4s -->
+                        <!-- Let's use 10 * 0.8s (GC) = 8s -->
                         <property name="timeout">8000</property>
                         <!-- How often we check heartbeat messages -->
                         <property name="timeout_check_interval">2000</property>

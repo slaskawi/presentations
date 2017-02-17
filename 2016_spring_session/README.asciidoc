@@ -121,6 +121,8 @@ strategy:
      maxSurge: 1
 ```
 
+** It is very important to prefer longer delays on `initialDelaySeconds` since Kubernetes might start killing not-ready Pods making the rebalance much harder for the cluster!
+
 === The Rolling Update demo
 
 * Navigate to `transaction-creator` directory and invoke `mvn fabric8:run`. This will load some data into the cluster

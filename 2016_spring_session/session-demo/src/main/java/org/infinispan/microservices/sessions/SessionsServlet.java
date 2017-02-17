@@ -23,6 +23,7 @@ public class SessionsServlet extends HttpServlet {
       PrintWriter writer = resp.getWriter();
       String sessionId = req.getSession(true).getId();
       resp.getWriter().println("Created session: " + sessionId);
+      resp.getWriter().println("Number Sessions in cache: " + sessionCache.size());
       resp.getWriter().println("Sessions in cache: " + sessionCache.keySet());
       writer.close();
    }
