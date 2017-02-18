@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
 
 public class TransactionCreator {
 
-   private static final int TOTAL_SIZE_IN_BYTES = 500 * 1024 * 1024; //500 MB
-   private static final int BATCH_SIZE = 500;
+   private static final int TOTAL_SIZE_IN_BYTES = 800 * 1024 * 1024; //500 MB
+   private static final int BATCH_SIZE = 1000;
 
    private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 

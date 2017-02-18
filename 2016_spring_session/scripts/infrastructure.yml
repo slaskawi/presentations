@@ -16,10 +16,10 @@ items:
       type: Rolling
       rollingParams:
         updatePeriodSeconds: 20
-        intervalSeconds: 20
+        intervalSeconds: 40
         timeoutSeconds: 600
         maxUnavailable: 1
-        maxSurge: 1
+        maxSurge: 2
     selector:
       environment: "infrastructure"
       project: "infinispan"
@@ -35,7 +35,7 @@ items:
         - args:
           - custom/transactions
           - -Djboss.default.jgroups.stack=kubernetes
-          image: jboss/infinispan-server:9.0.0.Beta2
+          image: slaskawi/infinispan-server-snapshot-custom
           imagePullPolicy: Always
           name: infinispan-server
           ports:
@@ -69,8 +69,8 @@ items:
               command:
               - /usr/local/bin/is_running.sh
             initialDelaySeconds: 20
-            timeoutSeconds: 20
-            periodSeconds: 15
+            timeoutSeconds: 25
+            periodSeconds: 30
             successThreshold: 1
             failureThreshold: 2
           readinessProbe:
@@ -78,8 +78,8 @@ items:
                 command:
                 - /usr/local/bin/is_healthy.sh
              initialDelaySeconds: 20
-             timeoutSeconds: 20
-             periodSeconds: 15
+             timeoutSeconds: 25
+             periodSeconds: 30
              successThreshold: 3
              failureThreshold: 2
         restartPolicy: Always
