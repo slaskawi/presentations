@@ -15,11 +15,11 @@ items:
     strategy:
       type: Rolling
       rollingParams:
-        updatePeriodSeconds: 20
-        intervalSeconds: 40
+        updatePeriodSeconds: 10
+        intervalSeconds: 20
         timeoutSeconds: 600
         maxUnavailable: 1
-        maxSurge: 2
+        maxSurge: 1
     selector:
       environment: "infrastructure"
       project: "infinispan"
@@ -68,20 +68,20 @@ items:
             exec:
               command:
               - /usr/local/bin/is_running.sh
-            initialDelaySeconds: 20
-            timeoutSeconds: 25
-            periodSeconds: 30
+            initialDelaySeconds: 10
+            timeoutSeconds: 15
+            periodSeconds: 20
             successThreshold: 1
             failureThreshold: 2
           readinessProbe:
              exec:
                 command:
                 - /usr/local/bin/is_healthy.sh
-             initialDelaySeconds: 20
-             timeoutSeconds: 25
-             periodSeconds: 30
-             successThreshold: 3
-             failureThreshold: 2
+             initialDelaySeconds: 10
+             timeoutSeconds: 15
+             periodSeconds: 20
+             successThreshold: 2
+             failureThreshold: 1
         restartPolicy: Always
         volumes:
         - configMap:
