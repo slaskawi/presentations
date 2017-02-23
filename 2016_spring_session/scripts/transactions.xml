@@ -207,21 +207,26 @@
                 <distributed-cache name="default" mode="SYNC" segments="20" owners="2" remote-timeout="30000" start="EAGER">
                     <locking acquire-timeout="30000" concurrency-level="1000" striping="false"/>
                     <transaction mode="NONE"/>
+                    <state-transfer enabled="false" />
                 </distributed-cache>
                 <distributed-cache name="memcachedCache" mode="SYNC" segments="20" owners="2" remote-timeout="30000" start="EAGER">
                     <locking acquire-timeout="30000" concurrency-level="1000" striping="false"/>
                     <transaction mode="NONE"/>
+                    <state-transfer enabled="false" />
                 </distributed-cache>
                  <distributed-cache name="transactions" mode="SYNC" segments="20" owners="2" remote-timeout="10000" start="EAGER">
                     <locking acquire-timeout="10000" />
                     <transaction mode="FULL_XA"/>
                      <!-- Read more about Partition handling here: http://blog.infinispan.org/2014/08/partitioned-clusters-tell-no-lies.html -->
                     <partition-handling enabled="true"/>
+                    <!-- Since Kubernetes will kill this Pod if it won't become Ready, we don't need to bother about timeout here -->
+                    <state-transfer enabled="true" timeout="6000000" await-initial-transfer="true"/>
                 </distributed-cache>
                 <distributed-cache name="sessions" mode="SYNC" segments="20" owners="2" remote-timeout="10000" start="EAGER">
                     <locking acquire-timeout="10000" />
                     <transaction mode="FULL_XA"/>
                     <partition-handling enabled="true"/>
+                    <state-transfer enabled="true" timeout="6000000" await-initial-transfer="true"/>
                 </distributed-cache>
             </cache-container>
         </subsystem>
@@ -356,6 +361,8 @@
                         <property name="check_interval">10000</property>
                     </protocol>
                     <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+                    <!-- Note that JGroups are configured for the demo. On real production system you should use
+                         much longer timeouts -->
                     <protocol type="FD_ALL">
                         <!-- The timeout after which we suspect P -->
                         <!-- Needs to be much larger than GC -->
@@ -373,9 +380,7 @@
                     </protocol>
                     <protocol type="UNICAST3"/>
                     <protocol type="pbcast.STABLE"/>
-                    <protocol type="pbcast.GMS">
-                        <property name="view_ack_collection_timeout">9000</property>
-                    </protocol>
+                    <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
                     <protocol type="FRAG2"/>
                 </stack>

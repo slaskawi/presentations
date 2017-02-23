@@ -122,6 +122,7 @@ strategy:
 ```
 
 ** It is very important to prefer longer delays on `initialDelaySeconds` since Kubernetes might start killing not-ready Pods making the rebalance much harder for the cluster!
+** Also, during the tests I got better results when using a higher values of `failureThreshold` and `successThreshold`
 
 === The Rolling Update demo
 

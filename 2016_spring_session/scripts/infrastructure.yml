@@ -61,6 +61,7 @@ items:
           - name: JAVA_OPTS
             value: "-server -Xms1G -Xmx1G -XX:+UseConcMarkSweepGC -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -XX:+PrintGC"
           terminationMessagePath: /dev/termination-log
+          terminationGracePeriodSeconds: 90
           volumeMounts:
           - mountPath: /opt/jboss/infinispan-server/standalone/configuration/custom
             name: config-volume
@@ -69,19 +70,19 @@ items:
               command:
               - /usr/local/bin/is_running.sh
             initialDelaySeconds: 10
-            timeoutSeconds: 15
-            periodSeconds: 20
+            timeoutSeconds: 80
+            periodSeconds: 60
             successThreshold: 1
-            failureThreshold: 2
+            failureThreshold: 5
           readinessProbe:
              exec:
                 command:
                 - /usr/local/bin/is_healthy.sh
              initialDelaySeconds: 10
-             timeoutSeconds: 15
-             periodSeconds: 20
+             timeoutSeconds: 40
+             periodSeconds: 30
              successThreshold: 2
-             failureThreshold: 1
+             failureThreshold: 5
         restartPolicy: Always
         volumes:
         - configMap:
