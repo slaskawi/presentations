@@ -1,0 +1,153 @@
+https://docs.openshift.com/container-platform/3.3/admin_guide/tcp_ingress_external_ports.html
+
+
+
+
+
+
+
+
+
+= Infinispan with Spring Boot @ OpenShift Demo
+
+This demo shows how to deploy Infinispan on OpenShift cluster (with Rolling Updates), use Spring integration to put data into the grid, and finally, use Spring Session to store session data between redeployments.
+
+== Prerequisites
+
+For running this demo you will need:
+
+* OpenShift Local Cluster (grab the installation files https://github.com/openshift/origin/releases[here])
+* https://github.com/johanhaleby/kubetail.git[KubeTail] for observing multiplexed log files from OpenShift
+* https://maven.apache.org/[Maven]
+
+== Deploying Infinispan cluster
+
+* Spin up local OpenShift cluster using `oc cluster up`
+* Trigger the initialization script `./init_infrastructure.sh`
+* Observe Infinispan Server Logs `kubetail -l project=infinispan`
+
+Note that Infinispan Servers form a cluster:
+
+```
+11:03:43,601 INFO  [org.infinispan.remoting.transport.jgroups.JGroupsTransport] (MSC service thread 1-4) ISPN000094: Received new cluster view for channel clustered: [transactions-repository-1-lbg16|3] (4) [transactions-repository-1-lbg16, transactions-repository-1-j080w, transactions-repository-1-qcw6m, transactions-repository-2-7h02b]
+```
+
+== Testing Kubernetes/OpenShift Rolling Updates
+
+Kubernetes/OpenShift Rolling Update is a process of rolling out a new version of application to the production. The progress of this issue has been tracked by JIRA https://issues.jboss.org/browse/ISPN-6673[ISPN-6673].
+
+=== Configuration tuning guide
+
+Tuning configuration might be divided into several steps:
+
+* Tuning JGroups stack to detect failed nodes quickly (but not too fast, otherwise Kubernetes might think that a node experiencing GC pause is dead)
+** The easiest way to track GC times is to use `-XX:+PrintGC` in `JAVA_OPTS` environment variable
+** On my local PC an averate GC (with CMS enabled) takes ~80ms
+** Having said that, an optimized JGroups stack looks like the following
+
+```
+<stack name="kubernetes">
+  <transport type="TCP" socket-binding="jgroups-tcp"/>
+  <!-- Before we begin, we need to know how long does GC take -->
+  <!-- On my local machine it's < 0.8s -->
+  <protocol type="kubernetes.KUBE_PING">
+      <!-- We ping other nodes every 1s -->
+      <property name="operationSleep">1000</property>
+      <!-- We assume that a node is dead after 3 * 1s = 3s -->
+      <!-- This obviously needs to be longer than GC -->
+      <property name="operationAttempts">3</property>
+  </protocol>
+  <protocol type="MERGE3">
+      <!-- The min and max intervals need to fit in Liveness probe -->
+      <!-- We use 3 * 10s = 30s total -->
+      <property name="min_interval">1000</property>
+      <property name="max_interval">8000</property>
+      <!-- We check for inconsistencies every 10s -->
+      <!-- This should play nice with Readiness Probe -->
+      <property name="check_interval">10000</property>
+  </protocol>
+  <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+  <protocol type="FD_ALL">
+      <!-- The timeout after which we suspect P -->
+      <!-- Needs to be much larger than GC -->
+      <!-- Let's use 10 * 0.8s (GC) = 2.4s -->
+      <property name="timeout">8000</property>
+      <!-- How often we check heartbeat messages -->
+      <property name="timeout_check_interval">2000</property>
+      <!-- How often we send out heartbeats -->
+      <property name="interval">3000</property>
+  </protocol>
+  <!-- If we want to go fast, we need to remove verify suspect -->
+  <!-- <protocol type="VERIFY_SUSPECT"/> -->
+  <protocol type="pbcast.NAKACK2">
+      <property name="use_mcast_xmit">false</property>
+  </protocol>
+  <protocol type="UNICAST3"/>
+  <protocol type="pbcast.STABLE"/>
+  <protocol type="pbcast.GMS">
+      <property name="view_ack_collection_timeout">9000</property>
+  </protocol>
+  <protocol type="MFC"/>
+  <protocol type="FRAG2"/>
+</stack>
+```
+
+* Tuning Rolling Update strategy to use HealthCheck API
+** Infinispan Docker image contains two scripts: `/usr/local/bin/is_healthy.sh` which return `0` if there's no rebalance in progress and `/usr/local/bin/is_running.sh` which returns `0` if server is running.
+** Those scripts shall be used as readiness and liveness probe.
+** The Rolling Update procedure should allocate additional Pods first and then slowly destroy the old Infinispan cluster. Also timeouts need to be slightly bigger to make sure we won't lose data because of a longer GC pause:
+
+.Probes configuration
+```
+livenessProbe:
+   exec:
+     command:
+     - /usr/local/bin/is_running.sh
+   initialDelaySeconds: 30
+   timeoutSeconds: 30
+   periodSeconds: 10
+   successThreshold: 1
+   failureThreshold: 2
+   readinessProbe:
+    exec:
+       command:
+       - /usr/local/bin/is_healthy.sh
+    initialDelaySeconds: 30
+    timeoutSeconds: 30
+    periodSeconds: 10
+    successThreshold: 3
+    failureThreshold: 2
+```
+
+.Rolling Update configuration
+```
+strategy:
+   type: Rolling
+   rollingParams:
+     updatePeriodSeconds: 20
+     intervalSeconds: 20
+     timeoutSeconds: 600
+     maxUnavailable: 1
+     maxSurge: 1
+```
+
+** It is very important to prefer longer delays on `initialDelaySeconds` since Kubernetes might start killing not-ready Pods making the rebalance much harder for the cluster!
+** Also, during the tests I got better results when using a higher values of `failureThreshold` and `successThreshold`
+
+=== The Rolling Update demo
+
+* Navigate to `transaction-creator` directory and invoke `mvn fabric8:run`. This will load some data into the cluster
+* Observe GC pauses: `kubetail -l project=infinispan`
+* Check the number of entries inside an Infinispan node: `oc rsh transaction-repository-XXX`, `/opt/jboss/infinispan-server/bin/ispn-cli.sh -c --controller=$(hostname -i):9990 '/subsystem=datagrid-infinispan/cache-container=clustered/distributed-cache=transactions:query' | grep -i "number-of-entries"`
+* Perform Rolling Update: `oc deploy transactions-repository --latest -n myproject`
+* Observe logs: `kubetail -l project=infinispan`, note some nodes are joining and some are leaving the cluster
+* Observe Pods: `watch oc get pods`
+* After the procedure is done, check the number of entries in the cluster
+
+== Spring Session with Remote Infinispan Cluster
+
+* Navigate to `session-demo` directory and invoke `mvn fabric8:deploy`.
+* Get the IP address of Session Demo node: `oc get pods -o wide`
+* Invoke CURL: `watch curl 172.17.0.4:8080/sessions`
+* Redeploy Infinispan cluster, note there's no downtime!
+* Redeploy Spring Session Demo and note the data is still there!
