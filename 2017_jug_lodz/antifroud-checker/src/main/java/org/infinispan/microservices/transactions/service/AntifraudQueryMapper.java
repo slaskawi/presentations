@@ -8,6 +8,7 @@ import org.infinispan.microservices.antifraud.model.TransactionInfo;
 import org.infinispan.microservices.antifraud.model.UserInfo;
 import org.infinispan.microservices.transactions.model.Transaction;
 import org.infinispan.microservices.user.service.UserGrabber;
+import org.infinispan.microservices.util.Timed;
 
 public class AntifraudQueryMapper {
 
@@ -17,7 +18,7 @@ public class AntifraudQueryMapper {
       this.userGrabber = userGrabber;
    }
 
-   //@Timed
+   @Timed
    public AntiFraudQueryData toAntiFraudQuery(Transaction transaction) {
       CardHolderInfo cardHolderInfo = new CardHolderInfo(transaction.getPan(), transaction.getCardHolderFirstName(), transaction.getCardHolderLastName(), transaction.getExpirationDate());
       TransactionInfo transactionInfo = new TransactionInfo(transaction.getCorrelationId(), transaction.getTransactionTime(), transaction.getAmount(), transaction.getCurrency(), transaction.getIp());

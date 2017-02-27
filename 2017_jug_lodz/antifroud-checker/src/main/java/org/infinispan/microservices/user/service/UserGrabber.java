@@ -10,7 +10,6 @@ import org.infinispan.microservices.user.repository.UserRepository;
 import org.infinispan.microservices.util.WaitUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.Cacheable;
 
 public class UserGrabber {
 
@@ -22,7 +21,7 @@ public class UserGrabber {
       this.userRepository = userRepository;
    }
 
-   @Cacheable(cacheNames = "user_data")
+   //@Cacheable(cacheNames = "user_data")
    public Optional<UserData> getUser(String firstName, String lastName) {
       List<UserData> userDatas = userRepository.findByFirstNameAndLastName(firstName, lastName);
 

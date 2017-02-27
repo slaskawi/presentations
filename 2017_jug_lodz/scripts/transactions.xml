@@ -163,22 +163,23 @@
             <cache-container name="clustered" default-cache="default" statistics="true">
                 <transport lock-timeout="60000"/>
                 <global-state/>
-                <distributed-cache-configuration name="transactional" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="transactional">
                     <transaction mode="NON_XA" locking="PESSIMISTIC"/>
                 </distributed-cache-configuration>
-                <replicated-cache-configuration name="replicated" mode="SYNC" start="EAGER"/>
-                <distributed-cache-configuration name="persistent-file-store" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="async" mode="ASYNC"/>
+                <replicated-cache-configuration name="replicated"/>
+                <distributed-cache-configuration name="persistent-file-store">
                     <file-store shared="false" fetch-state="true" passivation="false"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="indexed" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="indexed">
                     <indexing index="LOCAL" auto-config="true"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="memory-bounded" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="memory-bounded">
                     <memory>
                         <binary size="10000000" eviction="MEMORY"/>
                     </memory>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-file-store-passivation" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="persistent-file-store-passivation">
                     <memory>
                         <object size="10000"/>
                     </memory>
@@ -186,15 +187,15 @@
                         <write-behind modification-queue-size="1024" thread-pool-size="1"/>
                     </file-store>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-file-store-write-behind" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="persistent-file-store-write-behind">
                     <file-store shared="false" fetch-state="true" passivation="false">
                         <write-behind modification-queue-size="1024" thread-pool-size="1"/>
                     </file-store>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-rocksdb-store" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="persistent-rocksdb-store">
                     <rocksdb-store shared="false" fetch-state="true" passivation="false"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-jdbc-string-keyed" mode="SYNC" owners="2" start="EAGER">
+                <distributed-cache-configuration name="persistent-jdbc-string-keyed">
                     <string-keyed-jdbc-store datasource="java:jboss/datasources/ExampleDS" fetch-state="true" preload="false" purge="false" shared="false" passivation="false">
                         <string-keyed-table prefix="ISPN">
                             <id-column name="id" type="VARCHAR"/>
@@ -255,7 +256,6 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
                 </stack>
                 <stack name="s3-private">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -275,7 +275,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
                 <stack name="s3-presigned">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -294,7 +294,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
                 <stack name="s3-public">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -312,7 +312,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
                 <stack name="google">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -332,7 +332,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
                 <stack name="kubernetes">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -355,10 +355,12 @@
                         <property name="check_interval">10000</property>
                     </protocol>
                     <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+                    <!-- Note that JGroups are configured for the demo. On real production system you should use
+                         much longer timeouts -->
                     <protocol type="FD_ALL">
                         <!-- The timeout after which we suspect P -->
                         <!-- Needs to be much larger than GC -->
-                        <!-- Let's use 10 * 0.8s (GC) = 2.4s -->
+                        <!-- Let's use 10 * 0.8s (GC) = 8s -->
                         <property name="timeout">8000</property>
                         <!-- How often we check heartbeat messages -->
                         <property name="timeout_check_interval">2000</property>
@@ -372,11 +374,9 @@
                     </protocol>
                     <protocol type="UNICAST3"/>
                     <protocol type="pbcast.STABLE"/>
-                    <protocol type="pbcast.GMS">
-                        <property name="view_ack_collection_timeout">9000</property>
-                    </protocol>
+                    <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
             </stacks>
         </subsystem>

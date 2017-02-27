@@ -8,7 +8,7 @@ items:
     labels:
       environment: "infrastructure"
       project: "infinispan"
-      version: "9.0.0.Beta2"
+      version: "9.0.0.CR2"
     name: transactions-repository
   spec:
     replicas: 3
@@ -23,19 +23,19 @@ items:
     selector:
       environment: "infrastructure"
       project: "infinispan"
-      version: "9.0.0.Beta2"
+      version: "9.0.0.CR2"
     template:
       metadata:
         labels:
           environment: "infrastructure"
           project: "infinispan"
-          version: "9.0.0.Beta2"
+          version: "9.0.0.CR2"
       spec:
         containers:
         - args:
           - custom/transactions
           - -Djboss.default.jgroups.stack=kubernetes
-          image: slaskawi/infinispan-server-snapshot-custom
+          image: jboss/infinispan-server:9.0.0.CR2
           imagePullPolicy: Always
           name: infinispan-server
           ports:
@@ -96,7 +96,7 @@ items:
     labels:
       environment: infrastructure
       project: infinispan
-      version: 9.0.0.Beta2
+      version: 9.0.0.CR2
     name: transactions-repository
   spec:
     ports:
@@ -135,6 +135,6 @@ items:
     selector:
       environment: infrastructure
       project: infinispan
-      version: 9.0.0.Beta2
+      version: 9.0.0.CR2
     sessionAffinity: None
     type: ClusterIP

@@ -8,6 +8,7 @@ import java.util.List;
 import org.infinispan.microservices.antifraud.model.AntiFraudQueryData;
 import org.infinispan.microservices.antifraud.model.AntiFraudResponseData;
 import org.infinispan.microservices.antifraud.service.rules.AntiFraudRule;
+import org.infinispan.microservices.util.Timed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +22,7 @@ public class AntiFraudQueryProcessor {
       this.rules.addAll(Arrays.asList(rules));
    }
 
-   //@Timed
+   @Timed
    public AntiFraudResponseData process(AntiFraudQueryData query) {
       logger.info("Processing query {}", query);
       Integer scoring = rules.stream()

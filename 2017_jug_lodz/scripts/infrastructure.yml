@@ -99,7 +99,7 @@ items:
     labels:
       environment: "infrastructure"
       project: "infinispan"
-      version: "9.0.0.Beta2"
+      version: "9.0.0.CR2"
     name: transactions-repository
   spec:
     replicas: 3
@@ -114,19 +114,19 @@ items:
     selector:
       environment: "infrastructure"
       project: "infinispan"
-      version: "9.0.0.Beta2"
+      version: "9.0.0.CR2"
     template:
       metadata:
         labels:
           environment: "infrastructure"
           project: "infinispan"
-          version: "9.0.0.Beta2"
+          version: "9.0.0.CR2"
       spec:
         containers:
         - args:
           - custom/transactions
           - -Djboss.default.jgroups.stack=kubernetes
-          image: jboss/infinispan-server:9.0.0.Beta2
+          image: jboss/infinispan-server:9.0.0.CR2
           imagePullPolicy: Always
           name: infinispan-server
           ports:
@@ -152,6 +152,7 @@ items:
           - name: JAVA_OPTS
             value: "-server -Xms1G -Xmx1G -XX:+UseConcMarkSweepGC -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -XX:+PrintGC"
           terminationMessagePath: /dev/termination-log
+          terminationGracePeriodSeconds: 90
           volumeMounts:
           - mountPath: /opt/jboss/infinispan-server/standalone/configuration/custom
             name: config-volume
@@ -159,20 +160,20 @@ items:
             exec:
               command:
               - /usr/local/bin/is_running.sh
-            initialDelaySeconds: 30
-            timeoutSeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 10
+            timeoutSeconds: 80
+            periodSeconds: 60
             successThreshold: 1
-            failureThreshold: 2
+            failureThreshold: 5
           readinessProbe:
              exec:
                 command:
                 - /usr/local/bin/is_healthy.sh
-             initialDelaySeconds: 30
-             timeoutSeconds: 30
-             periodSeconds: 10
-             successThreshold: 3
-             failureThreshold: 2
+             initialDelaySeconds: 10
+             timeoutSeconds: 40
+             periodSeconds: 30
+             successThreshold: 2
+             failureThreshold: 5
         restartPolicy: Always
         volumes:
         - configMap:
@@ -186,7 +187,7 @@ items:
     labels:
       environment: infrastructure
       project: infinispan
-      version: 9.0.0.Beta2
+      version: 9.0.0.CR2
     name: transactions-repository
   spec:
     ports:
@@ -225,6 +226,6 @@ items:
     selector:
       environment: infrastructure
       project: infinispan
-      version: 9.0.0.Beta2
+      version: 9.0.0.CR2
     sessionAffinity: None
     type: ClusterIP
