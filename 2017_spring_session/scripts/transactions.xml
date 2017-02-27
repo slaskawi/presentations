@@ -163,22 +163,23 @@
             <cache-container name="clustered" default-cache="default" statistics="true">
                 <transport lock-timeout="60000"/>
                 <global-state/>
-                <distributed-cache-configuration name="transactional" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="transactional">
                     <transaction mode="NON_XA" locking="PESSIMISTIC"/>
                 </distributed-cache-configuration>
-                <replicated-cache-configuration name="replicated" mode="SYNC" start="EAGER"/>
-                <distributed-cache-configuration name="persistent-file-store" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="async" mode="ASYNC"/>
+                <replicated-cache-configuration name="replicated"/>
+                <distributed-cache-configuration name="persistent-file-store">
                     <file-store shared="false" fetch-state="true" passivation="false"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="indexed" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="indexed">
                     <indexing index="LOCAL" auto-config="true"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="memory-bounded" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="memory-bounded">
                     <memory>
                         <binary size="10000000" eviction="MEMORY"/>
                     </memory>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-file-store-passivation" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="persistent-file-store-passivation">
                     <memory>
                         <object size="10000"/>
                     </memory>
@@ -186,15 +187,15 @@
                         <write-behind modification-queue-size="1024" thread-pool-size="1"/>
                     </file-store>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-file-store-write-behind" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="persistent-file-store-write-behind">
                     <file-store shared="false" fetch-state="true" passivation="false">
                         <write-behind modification-queue-size="1024" thread-pool-size="1"/>
                     </file-store>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-rocksdb-store" mode="SYNC" start="EAGER">
+                <distributed-cache-configuration name="persistent-rocksdb-store">
                     <rocksdb-store shared="false" fetch-state="true" passivation="false"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-jdbc-string-keyed" mode="SYNC" owners="2" start="EAGER">
+                <distributed-cache-configuration name="persistent-jdbc-string-keyed">
                     <string-keyed-jdbc-store datasource="java:jboss/datasources/ExampleDS" fetch-state="true" preload="false" purge="false" shared="false" passivation="false">
                         <string-keyed-table prefix="ISPN">
                             <id-column name="id" type="VARCHAR"/>
@@ -259,7 +260,6 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
                 </stack>
                 <stack name="s3-private">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -279,7 +279,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
                 <stack name="s3-presigned">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -298,7 +298,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
                 <stack name="s3-public">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -316,7 +316,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
                 <stack name="google">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -336,21 +336,19 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
                 <stack name="kubernetes">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
                     <!-- Before we begin, we need to know how long does GC take -->
                     <!-- On my local machine it's < 0.8s -->
-                    <protocol type="MPING"/>
-                    <!-- At first, let's take KUBE_PING out of equation -->
-                    <!--<protocol type="kubernetes.KUBE_PING">-->
-                        <!--&lt;!&ndash; We ping other nodes every 1s &ndash;&gt;-->
-                        <!--<property name="operationSleep">1000</property>-->
-                        <!--&lt;!&ndash; We assume that a node is dead after 3 * 1s = 3s &ndash;&gt;-->
-                        <!--&lt;!&ndash; This obviously needs to be longer than GC &ndash;&gt;-->
-                        <!--<property name="operationAttempts">3</property>-->
-                    <!--</protocol>-->
+                    <protocol type="kubernetes.KUBE_PING">
+                        <!-- We ping other nodes every 1s -->
+                        <property name="operationSleep">1000</property>
+                        <!-- We assume that a node is dead after 3 * 1s = 3s -->
+                        <!-- This obviously needs to be longer than GC -->
+                        <property name="operationAttempts">3</property>
+                    </protocol>
                     <protocol type="MERGE3">
                         <!-- The min and max intervals need to fit in Liveness probe -->
                         <!-- We use 3 * 10s = 30s total -->
@@ -382,7 +380,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG2"/>
+                    <protocol type="FRAG3"/>
                 </stack>
             </stacks>
         </subsystem>
