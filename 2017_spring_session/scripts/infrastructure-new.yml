@@ -1,0 +1,74 @@
+---
+apiVersion: "v1"
+kind: "List"
+items:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      cluster: "new"
+    name: transactions-repository-new
+  spec:
+    replicas: 3
+    strategy:
+      type: Rolling
+      rollingParams:
+        updatePeriodSeconds: 10
+        intervalSeconds: 20
+        timeoutSeconds: 600
+        maxUnavailable: 1
+        maxSurge: 1
+    template:
+      metadata:
+        labels:
+          cluster: "new"
+      spec:
+        containers:
+        - args:
+          - custom/transactions-new
+          - -Djboss.default.jgroups.stack=kubernetes
+          image: slaskawi/infinispan-server-snapshot-custom
+          imagePullPolicy: Always
+          name: infinispan-server
+          ports:
+          - containerPort: 8888
+            protocol: TCP
+          - containerPort: 11222
+            protocol: TCP
+          env:
+          - name: OPENSHIFT_KUBE_PING_NAMESPACE
+            valueFrom: {fieldRef: {apiVersion: v1, fieldPath: metadata.namespace}}
+          - name: OPENSHIFT_KUBE_PING_LABELS
+            value: "cluster=new"
+          - name: JAVA_OPTS
+            value: "-server -Xms1G -Xmx1G -XX:+UseConcMarkSweepGC -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -XX:+PrintGC"
+          terminationMessagePath: /dev/termination-log
+          terminationGracePeriodSeconds: 90
+          volumeMounts:
+          - mountPath: /opt/jboss/infinispan-server/standalone/configuration/custom
+            name: config-volume
+          livenessProbe:
+            exec:
+              command:
+              - /usr/local/bin/is_running.sh
+            initialDelaySeconds: 10
+            timeoutSeconds: 80
+            periodSeconds: 60
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+             exec:
+                command:
+                - /usr/local/bin/is_healthy.sh
+             initialDelaySeconds: 10
+             timeoutSeconds: 40
+             periodSeconds: 30
+             successThreshold: 2
+             failureThreshold: 5
+        restartPolicy: Always
+        volumes:
+        - configMap:
+            name: transactions-configuration-new
+          name: config-volume
+    triggers:
+    - type: ConfigChange

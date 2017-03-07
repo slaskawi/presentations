@@ -19,18 +19,19 @@ public class SessionsServlet extends HttpServlet {
 
    @Override
    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-      BasicCache sessionCache = getSessionCache();
       PrintWriter writer = resp.getWriter();
       String sessionId = req.getSession(true).getId();
+      resp.getWriter().println("");
+      resp.getWriter().println("Number of transactions: " + getCache("transactions").size());
       resp.getWriter().println("Created session: " + sessionId);
-      resp.getWriter().println("Number Sessions in cache: " + sessionCache.size());
-      resp.getWriter().println("Sessions in cache: " + sessionCache.keySet());
+      resp.getWriter().println("Number Sessions in cache: " + getCache("sessions").size());
+      resp.getWriter().println("Sessions in cache: " + getCache("sessions").keySet());
       writer.close();
    }
 
-   private BasicCache getSessionCache() {
+   private BasicCache getCache(String cacheName) {
       ApplicationContext ac = (ApplicationContext) getServletContext().getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE);
       SpringRemoteCacheManager cacheManager = ac.getBean(SpringRemoteCacheManager.class);
-      return cacheManager.getCache("sessions").getNativeCache();
+      return cacheManager.getCache(cacheName).getNativeCache();
    }
 }

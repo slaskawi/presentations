@@ -68,7 +68,7 @@
     <profile>
         <subsystem xmlns="urn:jboss:domain:logging:3.0">
             <console-handler name="CONSOLE">
-                <level name="INFO"/>
+                <level name="TRACE"/>
                 <formatter>
                     <named-formatter name="COLOR-PATTERN"/>
                 </formatter>
@@ -106,7 +106,10 @@
                 <level name="DEBUG"/>
             </logger>
             <logger category="org.jgroups">
-                <level name="DEBUG"/>
+                <level name="INFO"/>
+            </logger>
+            <logger category="org.jgroups.ping.kube">
+                <level name="INFO"/>
             </logger>
             <logger category="sun.rmi">
                 <level name="WARN"/>
@@ -163,23 +166,22 @@
             <cache-container name="clustered" default-cache="default" statistics="true">
                 <transport lock-timeout="60000"/>
                 <global-state/>
-                <distributed-cache-configuration name="transactional">
+                <distributed-cache-configuration name="transactional" mode="SYNC" start="EAGER">
                     <transaction mode="NON_XA" locking="PESSIMISTIC"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="async" mode="ASYNC"/>
-                <replicated-cache-configuration name="replicated"/>
-                <distributed-cache-configuration name="persistent-file-store">
+                <replicated-cache-configuration name="replicated" mode="SYNC" start="EAGER"/>
+                <distributed-cache-configuration name="persistent-file-store" mode="SYNC" start="EAGER">
                     <file-store shared="false" fetch-state="true" passivation="false"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="indexed">
+                <distributed-cache-configuration name="indexed" mode="SYNC" start="EAGER">
                     <indexing index="LOCAL" auto-config="true"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="memory-bounded">
+                <distributed-cache-configuration name="memory-bounded" mode="SYNC" start="EAGER">
                     <memory>
                         <binary size="10000000" eviction="MEMORY"/>
                     </memory>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-file-store-passivation">
+                <distributed-cache-configuration name="persistent-file-store-passivation" mode="SYNC" start="EAGER">
                     <memory>
                         <object size="10000"/>
                     </memory>
@@ -187,15 +189,15 @@
                         <write-behind modification-queue-size="1024" thread-pool-size="1"/>
                     </file-store>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-file-store-write-behind">
+                <distributed-cache-configuration name="persistent-file-store-write-behind" mode="SYNC" start="EAGER">
                     <file-store shared="false" fetch-state="true" passivation="false">
                         <write-behind modification-queue-size="1024" thread-pool-size="1"/>
                     </file-store>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-rocksdb-store">
+                <distributed-cache-configuration name="persistent-rocksdb-store" mode="SYNC" start="EAGER">
                     <rocksdb-store shared="false" fetch-state="true" passivation="false"/>
                 </distributed-cache-configuration>
-                <distributed-cache-configuration name="persistent-jdbc-string-keyed">
+                <distributed-cache-configuration name="persistent-jdbc-string-keyed" mode="SYNC" owners="2" start="EAGER">
                     <string-keyed-jdbc-store datasource="java:jboss/datasources/ExampleDS" fetch-state="true" preload="false" purge="false" shared="false" passivation="false">
                         <string-keyed-table prefix="ISPN">
                             <id-column name="id" type="VARCHAR"/>
@@ -224,6 +226,9 @@
                     <state-transfer enabled="true" timeout="6000000" await-initial-transfer="true"/>
                 </distributed-cache>
                 <distributed-cache name="sessions" mode="SYNC" segments="20" owners="2" remote-timeout="10000" start="EAGER">
+                    <remote-store cache="sessions" hotrod-wrapping="true" read-only="true">
+                        <remote-server outbound-socket-binding="remote-store-hotrod-server" />
+                    </remote-store>
                     <locking acquire-timeout="10000" />
                     <transaction mode="FULL_XA"/>
                     <partition-handling enabled="true"/>
@@ -260,6 +265,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
                 </stack>
                 <stack name="s3-private">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -279,7 +285,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG3"/>
+                    <protocol type="FRAG2"/>
                 </stack>
                 <stack name="s3-presigned">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -298,7 +304,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG3"/>
+                    <protocol type="FRAG2"/>
                 </stack>
                 <stack name="s3-public">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -316,7 +322,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG3"/>
+                    <protocol type="FRAG2"/>
                 </stack>
                 <stack name="google">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
@@ -336,12 +342,10 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG3"/>
+                    <protocol type="FRAG2"/>
                 </stack>
                 <stack name="kubernetes">
-                    <transport type="TCP" socket-binding="jgroups-tcp" diagnostics-socket-binding="jgroups-diagnostics">
-                           <property name="logical_addr_cache_expiration">360000</property>
-			</transport>
+                    <transport type="TCP" socket-binding="jgroups-tcp"/>
                     <!-- Before we begin, we need to know how long does GC take -->
                     <!-- On my local machine it's < 0.8s -->
                     <protocol type="kubernetes.KUBE_PING">
@@ -382,7 +386,7 @@
                     <protocol type="pbcast.STABLE"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
-                    <protocol type="FRAG3"/>
+                    <protocol type="FRAG2"/>
                 </stack>
             </stacks>
         </subsystem>
@@ -478,7 +482,6 @@
         <socket-binding name="hotrod-internal" port="11223"/>
         <socket-binding name="hotrod-multi-tenancy" port="11224"/>
         <socket-binding name="jgroups-mping" port="0" multicast-address="${jboss.default.multicast.address:234.99.54.14}" multicast-port="45700"/>
-        <socket-binding name="jgroups-diagnostics" port="7500"/>
         <socket-binding name="jgroups-tcp" port="7600"/>
         <socket-binding name="jgroups-tcp-fd" port="57600"/>
         <socket-binding name="jgroups-udp" port="55200" multicast-address="${jboss.default.multicast.address:234.99.54.14}" multicast-port="45688"/>
@@ -490,7 +493,7 @@
         <socket-binding name="txn-status-manager" port="4713"/>
         <socket-binding name="websocket" port="8181"/>
         <outbound-socket-binding name="remote-store-hotrod-server">
-            <remote-destination host="remote-host" port="11222"/>
+            <remote-destination host="transactions-repository-remote-cache" port="11222"/>
         </outbound-socket-binding>
         <outbound-socket-binding name="remote-store-rest-server">
             <remote-destination host="remote-host" port="8080"/>
