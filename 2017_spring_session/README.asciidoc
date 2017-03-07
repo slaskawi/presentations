@@ -2,6 +2,10 @@
 
 This demo shows how to deploy Infinispan on OpenShift cluster (with Rolling Updates), use Spring integration to put data into the grid, and finally, use Spring Session to store session data between redeployments.
 
+== Slides
+
+Slides for this presentation might be found here: http://redhat.slides.com/slaskawi/infinispan-msa-demo/fullscreen?token=uBeORs7X
+
 == Prerequisites
 
 For running this demo you will need:
@@ -14,7 +18,7 @@ For running this demo you will need:
 
 * Spin up local OpenShift cluster using `oc cluster up`
 * Trigger the initialization script `./init_infrastructure.sh`
-* Observe Infinispan Server Logs `kubetail -l project=infinispan`
+* Observe Infinispan Server Logs `kubetail -l cluster=old`
 
 Note that Infinispan Servers form a cluster:
 
@@ -124,20 +128,21 @@ strategy:
 ** It is very important to prefer longer delays on `initialDelaySeconds` since Kubernetes might start killing not-ready Pods making the rebalance much harder for the cluster!
 ** Also, during the tests I got better results when using a higher values of `failureThreshold` and `successThreshold`
 
-=== The Rolling Update demo
+== Rolling out a new Spring Session app
 
-* Navigate to `transaction-creator` directory and invoke `mvn fabric8:run`. This will load some data into the cluster
-* Observe GC pauses: `kubetail -l project=infinispan`
-* Check the number of entries inside an Infinispan node: `oc rsh transaction-repository-XXX`, `/opt/jboss/infinispan-server/bin/ispn-cli.sh -c --controller=$(hostname -i):9990 '/subsystem=datagrid-infinispan/cache-container=clustered/distributed-cache=transactions:query' | grep -i "number-of-entries"`
-* Perform Rolling Update: `oc deploy transactions-repository --latest -n myproject`
-* Observe logs: `kubetail -l project=infinispan`, note some nodes are joining and some are leaving the cluster
-* Observe Pods: `watch oc get pods`
-* After the procedure is done, check the number of entries in the cluster
+* Navigate to `transaction-creator` directory and invoke `mvn fabric8:run`. This will load some data into the cluster.
+* Navigate to `session-demo` directory and invoke `mvn fabric8:deploy`. This will deploy a Spring Demo app into OpenShift.
+* Invoke `watch curl http://session-demo-myproject.192.168.0.17.nip.io/sessions` to see new sessions being created.
+* (Optionally) scale out the Spring Demo App by using `oc scale dc session-demo --replicas=3`.
+* Do the Rolling Update: `oc deploy session-demo --latest -n myproject`
+* Note that all sessions are still there! Magic happens!
 
-== Spring Session with Remote Infinispan Cluster
+== Rolling out a new Infinispan version using Red/Blue deployment
 
-* Navigate to `session-demo` directory and invoke `mvn fabric8:deploy`.
-* Get the IP address of Session Demo node: `oc get pods -o wide`
-* Invoke CURL: `watch curl 172.17.0.4:8080/sessions`
-* Redeploy Infinispan cluster, note there's no downtime!
-* Redeploy Spring Session Demo and note the data is still there!
+* Do all the steps from previous paragraph.
+* Initialize new Infinispan cluster by invoking: `./init_rolling_upgrade_cluster.sh`
+* Note that both clusters are SEPARATE!
+* Edit service and point it to the new cluster: `oc edit svc transactions-repository`
+* Roll out a new Spring App (Spring configuration will pick up new addresses).
+* Note that only sessions are present in the new deployment. That's on purpose.
+* (Optionally) revert the service configuration and roll back to the old cluster.
