@@ -1,0 +1,21 @@
+= Infinispan with Multi-tenancy @ OpenShift Demo
+
+This demo shows how to deploy Infinispan on OpenShift cluster (with TLS/SNI), and connect to the Grid using Hot Rod client.
+The demo will use https://docs.openshift.com/enterprise/3.0/architecture/core_concepts/routes.html#secured-routes[Passthrough Route] which will allow clients to connect to it.
+
+== Slides
+
+TBD
+
+== Prerequisites
+
+For running this demo you will need:
+
+* OpenShift Local Cluster (grab the installation files https://github.com/openshift/origin/releases[here])
+* https://github.com/johanhaleby/kubetail.git[KubeTail] for observing multiplexed log files from OpenShift
+* https://maven.apache.org/[Maven]
+
+== How to run the demo?
+
+* Deploy it on OpenShift local cluster using `./init_infrastructure.sh`
+* Play with `cache-checker` application.

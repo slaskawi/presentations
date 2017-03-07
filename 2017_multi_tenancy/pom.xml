@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.infinispan.microservices</groupId>
+    <artifactId>multi-tenancy-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <version.spring.boot>1.4.3.RELEASE</version.spring.boot>
+        <fabric8.build.strategy>docker</fabric8.build.strategy>
+        <fabric8-maven-plugin.version>3.2.8</fabric8-maven-plugin.version>
+
+        <fabric8.docker.plugin.skip>true</fabric8.docker.plugin.skip>
+        <docker.main.class>org.infinispan.microservices.user.Main</docker.main.class>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.infinispan</groupId>
+                <artifactId>infinispan-bom</artifactId>
+                <version>9.0.0.Beta2</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-parent</artifactId>
+                <version>${version.spring.boot}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.infinispan</groupId>
+                <artifactId>infinispan-spring-boot-starter</artifactId>
+                <version>1.0.0.Beta1-SNAPSHOT</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <modules>
+        <module>cache-checker</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${version.spring.boot}</version>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>fabric8-maven-plugin</artifactId>
+                <version>${fabric8-maven-plugin.version}</version>
+                <configuration>
+                    <skip>${fabric8.docker.plugin.skip}</skip>
+                    <images>
+                        <image>
+                            <name>infinispan/${project.artifactId}:${project.version}</name>
+                            <build>
+                                <from>java:8-jre-alpine</from>
+                                <assembly>
+                                    <basedir>/deployments</basedir>
+                                    <descriptorRef>artifact-with-dependencies</descriptorRef>
+                                </assembly>
+                                <entryPoint>
+                                    <shell>java -cp "/deployments/*" -Djava.net.preferIPv4Stack=true ${docker.main.class}</shell>
+                                </entryPoint>
+                            </build>
+                        </image>
+                    </images>
+                    <!-- We are not interested in creating any services -->
+                    <ignoreServices>true</ignoreServices>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>resource</goal>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
