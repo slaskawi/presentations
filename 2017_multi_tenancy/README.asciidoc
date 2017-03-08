@@ -5,7 +5,7 @@ The demo will use https://docs.openshift.com/enterprise/3.0/architecture/core_co
 
 == Slides
 
-TBD
+http://redhat.slides.com/slaskawi/infinispan-msa-demo-7?token=dHDYdg76
 
 == Prerequisites
 
