@@ -17,8 +17,9 @@
 
         <fabric8.docker.plugin.skip>true</fabric8.docker.plugin.skip>
         <docker.main.class>org.infinispan.microservices.user.Main</docker.main.class>
-        <infinispan-spring-boot-starter.version>1.0.0.CR1-SNAPSHOT</infinispan-spring-boot-starter.version>
+        <infinispan-spring-boot-starter.version>1.0.0.CR1</infinispan-spring-boot-starter.version>
         <spring-session.version>1.3.0.RELEASE</spring-session.version>
+        <infinispan-bom.version>9.0.0.CR4</infinispan-bom.version>
     </properties>
 
     <dependencyManagement>
@@ -26,7 +27,7 @@
             <dependency>
                 <groupId>org.infinispan</groupId>
                 <artifactId>infinispan-bom</artifactId>
-                <version>9.0.0.Beta2</version>
+                <version>${infinispan-bom.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

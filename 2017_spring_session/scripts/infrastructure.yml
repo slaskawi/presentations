@@ -30,7 +30,7 @@ items:
           - custom/transactions
           - -Djboss.default.jgroups.stack=kubernetes
           - --debug
-          image: slaskawi/infinispan-server-snapshot-custom
+          image: jboss/infinispan-server:9.0.0.CR4
           imagePullPolicy: Always
           name: infinispan-server
           ports:

@@ -27,7 +27,7 @@ items:
         - args:
           - custom/transactions-new
           - -Djboss.default.jgroups.stack=kubernetes
-          image: slaskawi/infinispan-server-snapshot-custom
+          image: jboss/infinispan-server:9.0.0.CR4
           imagePullPolicy: Always
           name: infinispan-server
           ports:

@@ -205,20 +205,12 @@
                         <write-behind modification-queue-size="1024" thread-pool-size="1"/>
                     </string-keyed-jdbc-store>
                 </distributed-cache-configuration>
-                <distributed-cache name="default" mode="SYNC" segments="20" owners="2" remote-timeout="30000" start="EAGER">
-                    <locking acquire-timeout="30000" concurrency-level="1000" striping="false"/>
-                    <transaction mode="NONE"/>
-                    <state-transfer enabled="false" />
-                </distributed-cache>
-                <distributed-cache name="memcachedCache" mode="SYNC" segments="20" owners="2" remote-timeout="30000" start="EAGER">
-                    <locking acquire-timeout="30000" concurrency-level="1000" striping="false"/>
-                    <transaction mode="NONE"/>
-                    <state-transfer enabled="false" />
-                </distributed-cache>
-                 <distributed-cache name="transactions" mode="SYNC" segments="20" owners="2" remote-timeout="10000" start="EAGER">
+                <distributed-cache name="default"/>
+                <replicated-cache name="repl" configuration="replicated"/>
+                <distributed-cache name="transactions" mode="SYNC" segments="20" owners="2" remote-timeout="10000" start="EAGER">
                     <locking acquire-timeout="10000" />
                     <transaction mode="FULL_XA"/>
-                     <!-- Read more about Partition handling here: http://blog.infinispan.org/2014/08/partitioned-clusters-tell-no-lies.html -->
+                    <!-- Read more about Partition handling here: http://blog.infinispan.org/2014/08/partitioned-clusters-tell-no-lies.html -->
                     <partition-handling enabled="true"/>
                     <!-- Since Kubernetes will kill this Pod if it won't become Ready, we don't need to bother about timeout here -->
                     <state-transfer enabled="true" timeout="6000000" await-initial-transfer="true"/>
@@ -235,9 +227,9 @@
             <hotrod-connector socket-binding="hotrod" cache-container="clustered">
                 <topology-state-transfer lazy-retrieval="false" lock-timeout="1000" replication-timeout="5000"/>
             </hotrod-connector>
-            <memcached-connector socket-binding="memcached" cache-container="clustered"/>
-            <rest-connector socket-binding="rest" cache-container="clustered" security-domain="other" auth-method="BASIC"/>
-            <websocket-connector socket-binding="websocket" cache-container="clustered"/>
+            <rest-connector socket-binding="rest" cache-container="clustered">
+                <authentication security-realm="ApplicationRealm" auth-method="BASIC"/>
+            </rest-connector>
         </subsystem>
         <subsystem xmlns="urn:infinispan:server:jgroups:9.0">
             <channels default="cluster">
@@ -339,9 +331,9 @@
                     <protocol type="FRAG3"/>
                 </stack>
                 <stack name="kubernetes">
-                    <transport type="TCP" socket-binding="jgroups-tcp" diagnostics-socket-binding="jgroups-diagnostics">
+                    <transport type="TCP" socket-binding="jgroups-tcp">
                            <property name="logical_addr_cache_expiration">360000</property>
-			</transport>
+			        </transport>
                     <!-- Before we begin, we need to know how long does GC take -->
                     <!-- On my local machine it's < 0.8s -->
                     <protocol type="kubernetes.KUBE_PING">
@@ -478,7 +470,6 @@
         <socket-binding name="hotrod-internal" port="11223"/>
         <socket-binding name="hotrod-multi-tenancy" port="11224"/>
         <socket-binding name="jgroups-mping" port="0" multicast-address="${jboss.default.multicast.address:234.99.54.14}" multicast-port="45700"/>
-        <socket-binding name="jgroups-diagnostics" port="7500"/>
         <socket-binding name="jgroups-tcp" port="7600"/>
         <socket-binding name="jgroups-tcp-fd" port="57600"/>
         <socket-binding name="jgroups-udp" port="55200" multicast-address="${jboss.default.multicast.address:234.99.54.14}" multicast-port="45688"/>
@@ -486,6 +477,7 @@
         <socket-binding name="memcached" port="11211"/>
         <socket-binding name="rest" port="8080"/>
         <socket-binding name="rest-multi-tenancy" port="8081"/>
+        <socket-binding name="rest-ssl" port="8443"/>
         <socket-binding name="txn-recovery-environment" port="4712"/>
         <socket-binding name="txn-status-manager" port="4713"/>
         <socket-binding name="websocket" port="8181"/>
