@@ -1,0 +1,22 @@
+<configuration>
+    <!-- Log Anti-fraud queries -->
+    <logger name="org.infinispan.microservices.antifraud.service.AntiFraudQueryProcessor" level="DEBUG"/>
+
+    <!-- Log Cache content -->
+    <logger name="org.infinispan.microservices.caching.CacheInspector" level="DEBUG"/>
+
+
+    <!-- Other, non-relevant stuff -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-1level %logger{0} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.infinispan.microservices" level="DEBUG"/>
+    <logger name="org.jgroups" level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
