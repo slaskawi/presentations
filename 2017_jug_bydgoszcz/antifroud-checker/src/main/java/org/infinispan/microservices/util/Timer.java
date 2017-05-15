@@ -19,7 +19,7 @@ public class Timer {
    public Object logServiceAccess(ProceedingJoinPoint pjp) throws Throwable {
       long time = System.currentTimeMillis();
       Object retVal = pjp.proceed();
-      logger.info("Completed {} within {} ms", pjp.getSignature(), System.currentTimeMillis() - time);
+      logger.info("Completed {} within {} ms", pjp.getSignature().toShortString(), System.currentTimeMillis() - time);
       return retVal;
    }
 

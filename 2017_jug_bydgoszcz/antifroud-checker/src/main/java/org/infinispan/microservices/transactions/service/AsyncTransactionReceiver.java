@@ -1,6 +1,5 @@
 package org.infinispan.microservices.transactions.service;
 
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -15,16 +14,14 @@ import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.annotation.ClientCacheEntryCreated;
 import org.infinispan.client.hotrod.annotation.ClientListener;
 import org.infinispan.client.hotrod.event.ClientCacheEntryCreatedEvent;
-import org.infinispan.commons.util.CloseableIterator;
 import org.infinispan.microservices.transactions.model.Transaction;
 
-@ClientListener
+@ClientListener(includeCurrentState = true)
 public class AsyncTransactionReceiver {
 
    public static final String CACHE_FOR_TRANSACTIONS = "transactions_for_antifraud_check";
-   private static final int QUEUE_CAPACITY = 10;
-   private static final int THREAD_POOL_SIZE = 10;
-   private static final int BATCH_SIZE = 5;
+   private static final int QUEUE_CAPACITY = 32;
+   private static final int THREAD_POOL_SIZE = 8;
 
    private final RemoteCache<String, Transaction> remoteCache;
 
@@ -36,25 +33,8 @@ public class AsyncTransactionReceiver {
    }
 
    @PostConstruct
-   public void init() {
-      remoteCache.addClientListener(this);
-      executorService.submit(() -> loadOldTransactions());
-   }
-
-   private void loadOldTransactions() {
-      CloseableIterator<Map.Entry<Object, Object>> entryCloseableIterator1 = remoteCache.retrieveEntries(null, BATCH_SIZE);
-      while(entryCloseableIterator1.hasNext()) {
-         Map.Entry<Object, Object> next = entryCloseableIterator1.next();
-         if(next != null && next.getValue() != null) {
-            try {
-               Transaction transaction = (Transaction) next.getValue();
-               transactionQueue.put(CompletableFuture.completedFuture(transaction));
-               remoteCache.removeAsync(next.getKey());
-            } catch (InterruptedException e) {
-               return;
-            }
-         }
-      }
+   public void startProcessing() {
+      new Thread(() -> remoteCache.addClientListener(this)).start();
    }
 
    @PreDestroy

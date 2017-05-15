@@ -24,7 +24,7 @@ public class AntiFraudQueryProcessor {
 
    @Timed
    public AntiFraudResponseData process(AntiFraudQueryData query) {
-      logger.info("Processing query {}", query);
+      logger.info("Processing query {}", query.getTransactionInfo().getTransactionId());
       Integer scoring = rules.stream()
             .map(rule -> rule.process(query))
             .reduce(0, Integer::sum);

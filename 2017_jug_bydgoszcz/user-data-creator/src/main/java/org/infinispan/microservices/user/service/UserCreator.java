@@ -2,6 +2,7 @@ package org.infinispan.microservices.user.service;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import javax.annotation.PostConstruct;
@@ -26,12 +27,12 @@ public class UserCreator {
    }
 
    @PostConstruct
-   public void init() {
+   public void init() throws InterruptedException {
       logger.info("Initializing database");
       insertData();
       queryData();
       logger.info("Database initialization finished. Standing by...");
-      while(true);
+      TimeUnit.DAYS.sleep(1);
    }
 
    private void queryData() {
