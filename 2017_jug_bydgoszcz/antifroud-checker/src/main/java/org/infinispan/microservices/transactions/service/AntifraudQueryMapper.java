@@ -18,7 +18,6 @@ public class AntifraudQueryMapper {
       this.userGrabber = userGrabber;
    }
 
-   @Timed
    public AntiFraudQueryData toAntiFraudQuery(Transaction transaction) {
       CardHolderInfo cardHolderInfo = new CardHolderInfo(transaction.getPan(), transaction.getCardHolderFirstName(), transaction.getCardHolderLastName(), transaction.getExpirationDate());
       TransactionInfo transactionInfo = new TransactionInfo(transaction.getCorrelationId(), transaction.getTransactionTime(), transaction.getAmount(), transaction.getCurrency(), transaction.getIp());
