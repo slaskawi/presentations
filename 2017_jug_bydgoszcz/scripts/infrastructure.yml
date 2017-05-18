@@ -257,7 +257,6 @@ items:
       version: 1.0.0-SNAPSHOT
     name: antifroud-checker
   spec:
-    host: antifroud-checker-myproject.127.0.0.1.nip.io
     port:
       targetPort: 8080
     to:
