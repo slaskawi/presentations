@@ -7,4 +7,3 @@ oc create configmap transactions-configuration --from-file=./scripts/transaction
 oc create -f ./scripts/infrastructure.yml || true
 mvn clean fabric8:deploy -pl user-data-creator
 mvn clean fabric8:deploy -pl transaction-creator
-mvn clean fabric8:deploy -pl antifroud-checker
