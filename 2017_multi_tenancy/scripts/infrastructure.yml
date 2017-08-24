@@ -8,7 +8,7 @@ items:
     labels:
       environment: "infrastructure"
       project: "infinispan"
-      version: "9.0.0.CR2"
+      version: "9.1.0.Final"
     name: transactions-repository
   spec:
     replicas: 1
@@ -23,19 +23,19 @@ items:
     selector:
       environment: "infrastructure"
       project: "infinispan"
-      version: "9.0.0.CR2"
+      version: "9.1.0.Final"
     template:
       metadata:
         labels:
           environment: "infrastructure"
           project: "infinispan"
-          version: "9.0.0.CR2"
+          version: "9.1.0.Final"
       spec:
         containers:
         - args:
           - custom/transactions
           - -Djboss.default.jgroups.stack=kubernetes
-          image: jboss/infinispan-server:9.0.0.CR2
+          image: jboss/infinispan-server:9.1.0.Final-2
           imagePullPolicy: Always
           name: infinispan-server
           ports:
@@ -65,10 +65,10 @@ items:
           volumeMounts:
           - mountPath: /opt/jboss/infinispan-server/standalone/configuration/custom
             name: config-volume
-          - mountPath: /opt/jboss/infinispan-server/standalone/configuration/default-server-keystore
-            name: default-server-keystore-volume
-          - mountPath: /opt/jboss/infinispan-server/standalone/configuration/sni-server-keystore
-            name: sni-server-keystore-volume
+          - mountPath: /opt/jboss/infinispan-server/standalone/configuration/client-1-server-keystore
+            name: client-1-server-keystore
+          - mountPath: /opt/jboss/infinispan-server/standalone/configuration/client-2-server-keystore
+            name: client-2-server-keystore
           livenessProbe:
             exec:
               command:
@@ -93,11 +93,11 @@ items:
             name: transactions-configuration
           name: config-volume
         - secret:
-            secretName: default-server-keystore
-          name: default-server-keystore-volume
+            secretName: client-1-server-keystore
+          name: client-1-server-keystore
         - secret:
-            secretName: sni-server-keystore
-          name: sni-server-keystore-volume
+            secretName: client-2-server-keystore
+          name: client-2-server-keystore
     triggers:
     - type: ConfigChange
 - apiVersion: v1
@@ -106,7 +106,7 @@ items:
     labels:
       environment: infrastructure
       project: infinispan
-      version: 9.0.0.CR2
+      version: 9.1.0.Final
     name: transactions-repository
   spec:
     ports:
@@ -145,7 +145,7 @@ items:
     selector:
       environment: infrastructure
       project: infinispan
-      version: 9.0.0.CR2
+      version: 9.1.0.Final
     sessionAffinity: None
     type: LoadBalancer
 - apiVersion: v1
@@ -163,15 +163,6 @@ items:
       name: transactions-repository
       weight: 100
     wildcardPolicy: None
-  status:
-    ingress:
-    - conditions:
-      - lastTransitionTime: 2017-03-07T11:38:25Z
-        status: "True"
-        type: Admitted
-      host: transactions-repository-1-myproject.192.168.0.17.nip.io
-      routerName: router
-      wildcardPolicy: None
 - apiVersion: v1
   kind: Route
   metadata:
@@ -187,15 +178,6 @@ items:
       name: transactions-repository
       weight: 100
     wildcardPolicy: None
-  status:
-    ingress:
-    - conditions:
-      - lastTransitionTime: 2017-03-07T11:38:25Z
-        status: "True"
-        type: Admitted
-      host: transactions-repository-2-myproject.192.168.0.17.nip.io
-      routerName: router
-      wildcardPolicy: None
 - apiVersion: v1
   kind: Route
   metadata:
@@ -211,12 +193,3 @@ items:
       name: transactions-repository
       weight: 100
     wildcardPolicy: None
-  status:
-    ingress:
-    - conditions:
-      - lastTransitionTime: 2017-03-07T11:38:25Z
-        status: "True"
-        type: Admitted
-      host: transactions-repository-3-myproject.192.168.0.17.nip.io
-      routerName: router
-      wildcardPolicy: None

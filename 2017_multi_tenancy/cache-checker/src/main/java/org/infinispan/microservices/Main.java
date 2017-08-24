@@ -9,8 +9,8 @@ import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 
 public class Main {
 
-   private static final String SSL_REALM_1 = "default_client_truststore.jks";
-   private static final String SSL_REALM_2 = "sni_client_truststore.jks";
+   private static final String SSL_REALM_1 = "client-1-truststore.jks";
+   private static final String SSL_REALM_2 = "client-2-truststore.jks";
 
    public static void main(String[] args) throws Exception {
 
