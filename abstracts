@@ -1,0 +1,9 @@
+Speaker info	
+
+Sebastian works for Red Hat as a Senior Software Engineer focusing on Keycloak, Infinispan and JGroups projects. Sebastian focuses on application level security as well as communication protocols used by the Cloud Native Applications. After many years, Sebastian decided to continue his education journey and started PhD at the University of Technology and Life Sciences in Bydgoszcz. Sebastian is also one of the founders of Bydgoszcz Java User Group and organizers of the first IT conference in Bydgoszcz - Bitconf. His free time, Sebastian spends on playing peekaboo with his daughter, making beer at home or playing tennis. 
+
+Securing Istio-based apps with Keycloak
+
+Over the years advanced application features, such as Circuit Breaking, Telemetry or Security, used to be embedded directly into the application. Istio changed the way we build our systems by those features into the platform, where they belong. This allows application developers to be more productive and focus on solving business problems. During the session we will focus on one of the hardest problems in development process - applying Security. We will dive into JWT and TLS standards to see how they fit into modern applications.
+
+
