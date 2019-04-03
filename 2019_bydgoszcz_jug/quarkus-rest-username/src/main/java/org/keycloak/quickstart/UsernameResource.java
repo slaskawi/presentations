@@ -18,12 +18,18 @@ public class UsernameResource {
     String preferred_username;
 
     @Inject
+    @Claim("address")
+    String address;
+
+    @Inject
     @RestClient
     CapsService capsService;
 
     @GET
     @RolesAllowed({"user"})
     public String getUsername() {
+        System.out.println(address);
+
         return capsService.toCaps(preferred_username);
     }
 }
