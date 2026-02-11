@@ -268,6 +268,12 @@ else
 fi
 
 echo "-----------------------------------------------------------------------------"
+echo "5. Deploying webapp"
+echo "-----------------------------------------------------------------------------"
+
+. ./webapp.sh
+
+echo "-----------------------------------------------------------------------------"
 echo "5. Checking client credentials grant with Kubernetes service account token"
 echo "-----------------------------------------------------------------------------"
 
@@ -286,5 +292,6 @@ else
 fi
 
 echo ""
-echo "Keycloak available on $KEYCLOAK_URL"
+echo "Keycloak available at $KEYCLOAK_URL"
 echo "Admin credentials are admin/admin"
+echo "Demo available at: http://demo.127.0.0.1.nip.io"

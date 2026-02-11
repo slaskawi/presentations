@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keycloak Signed JWT - KubeCon 2026 Demo</title>
+  <link rel="stylesheet" href="/tailwind.css">
+  <script type="module">
+    // Make keycloak-js available globally for future OAuth integration
+    import Keycloak from '/keycloak.min.js';
+    window.Keycloak = Keycloak;
+  </script>
+  <style>
+    /* Keycloak Admin Console color palette */
+    :root {
+      --kc-header-bg: #1b1d21;
+      --kc-sidebar-bg: #212427;
+      --kc-sidebar-hover: #2b2d31;
+      --kc-accent: #4d9bd4;
+      --kc-content-bg: #f0f0f0;
+      --kc-section-label: #8b8d8f;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col bg-gray-100">
+
+  <!-- Header -->
+  <header class="flex items-center px-4 h-14 shrink-0" style="background-color: var(--kc-header-bg);">
+    <!-- Hamburger (mobile) -->
+    <button id="hamburger" class="md:hidden text-white mr-3 focus:outline-none" aria-label="Toggle sidebar">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+    <!-- Logo / Title -->
+    <div class="flex items-center gap-3">
+      <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <span class="text-white text-lg font-semibold tracking-wide">Keycloak Signed JWT KubeCon 2026 Demo</span>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="hidden md:flex flex-col w-64 shrink-0 overflow-y-auto" style="background-color: var(--kc-sidebar-bg);">
+      <div class="px-5 pt-6 pb-2">
+        <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--kc-section-label);">Demo Scenarios</span>
+      </div>
+      <ul class="flex flex-col">
+        <li>
+          <a href="#" class="nav-item active flex items-center px-5 py-3 text-sm text-white border-l-4 transition-colors"
+             data-tab="client-secret">
+            Client ID + Client Secret
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item flex items-center px-5 py-3 text-sm text-white border-l-4 border-transparent transition-colors"
+             data-tab="user-auth">
+            Signed JWTs and User Auth
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item flex items-center px-5 py-3 text-sm text-white border-l-4 border-transparent transition-colors"
+             data-tab="client-auth">
+            Signed JWT and Client Auth
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6 md:p-10" style="background-color: var(--kc-content-bg);">
+      <!-- Error banner -->
+      <div id="error-banner" class="hidden mb-6 p-4 rounded bg-red-100 border border-red-400 text-red-800 text-sm">
+        <strong>Error:</strong> <span id="error-message"></span>
+      </div>
+
+      <!-- Page title -->
+      <h1 id="page-title" class="text-2xl font-semibold text-gray-900 mb-6">
+        Hello World - Client ID + Client Secret
+      </h1>
+
+      <!-- Token display -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Decoded Kubernetes Service Account Token
+        </label>
+        <textarea
+          id="token-display"
+          readonly
+          rows="20"
+          class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+          placeholder="Loading token..."></textarea>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    // --- Tab data ---
+    const tabs = {
+      'client-secret': 'Client ID + Client Secret',
+      'user-auth':     'Signed JWTs and User Auth',
+      'client-auth':   'Signed JWT and Client Auth',
+    };
+
+    // --- Tab switching ---
+    document.querySelectorAll('.nav-item').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const tabKey = link.dataset.tab;
+
+        // Update active sidebar highlight
+        document.querySelectorAll('.nav-item').forEach(el => {
+          el.classList.remove('active');
+          el.style.borderLeftColor = 'transparent';
+          el.style.backgroundColor = '';
+        });
+        link.classList.add('active');
+        link.style.borderLeftColor = 'var(--kc-accent)';
+        link.style.backgroundColor = 'var(--kc-sidebar-hover)';
+
+        // Update title
+        document.getElementById('page-title').textContent = 'Hello World - ' + tabs[tabKey];
+
+        // Close sidebar on mobile after selection
+        if (window.innerWidth < 768) {
+          document.getElementById('sidebar').classList.add('hidden');
+        }
+      });
+    });
+
+    // Set initial active style
+    const firstNav = document.querySelector('.nav-item.active');
+    if (firstNav) {
+      firstNav.style.borderLeftColor = 'var(--kc-accent)';
+      firstNav.style.backgroundColor = 'var(--kc-sidebar-hover)';
+    }
+
+    // --- Hamburger toggle ---
+    document.getElementById('hamburger').addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('hidden');
+      sidebar.classList.toggle('flex');
+    });
+
+    // --- Base64url decode ---
+    function base64urlDecode(str) {
+      // Replace base64url chars with standard base64
+      let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      // Pad with '='
+      while (base64.length % 4 !== 0) {
+        base64 += '=';
+      }
+      return atob(base64);
+    }
+
+    // --- Fetch and decode token ---
+    async function fetchToken() {
+      const display = document.getElementById('token-display');
+      const errorBanner = document.getElementById('error-banner');
+      const errorMessage = document.getElementById('error-message');
+
+      try {
+        const response = await fetch('/api/token');
+        if (!response.ok) {
+          throw new Error('Failed to fetch token (HTTP ' + response.status + ')');
+        }
+
+        const raw = (await response.text()).trim();
+        const parts = raw.split('.');
+        if (parts.length !== 3) {
+          throw new Error('Invalid JWT format: expected 3 parts, got ' + parts.length);
+        }
+
+        const header = JSON.parse(base64urlDecode(parts[0]));
+        const payload = JSON.parse(base64urlDecode(parts[1]));
+
+        const decoded = {
+          header: header,
+          payload: payload,
+        };
+
+        display.value = JSON.stringify(decoded, null, 2);
+        errorBanner.classList.add('hidden');
+      } catch (err) {
+        display.value = '';
+        errorMessage.textContent = err.message;
+        errorBanner.classList.remove('hidden');
+      }
+    }
+
+    // Fetch token on page load
+    fetchToken();
+
+    // keycloak-js adapter loaded and available as window.Keycloak
+    // Will be configured per-tab for different auth flows:
+    // const keycloak = new Keycloak({
+    //   url: 'https://keycloak.127.0.0.1.nip.io',
+    //   realm: 'kubernetes',
+    //   clientId: 'myclient'
+    // });
+  </script>
+
+</body>
+</html>

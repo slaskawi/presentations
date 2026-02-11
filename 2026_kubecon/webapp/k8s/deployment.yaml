@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      serviceAccountName: webapp-serviceaccount
+      containers:
+      - name: webapp
+        image: webapp:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - mountPath: /var/run/secrets/tokens
+          name: kc-token
+          readOnly: true
+      volumes:
+      - name: kc-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: kctoken
+              expirationSeconds: 600
+              audience: https://keycloak.127.0.0.1.nip.io/realms/kubernetes
