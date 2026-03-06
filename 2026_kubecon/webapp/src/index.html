@@ -82,18 +82,50 @@
         Hello World - Client ID + Client Secret
       </h1>
 
-      <!-- Token display -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Decoded Kubernetes Service Account Token
-        </label>
-        <textarea
-          id="token-display"
-          readonly
-          rows="20"
-          class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
-          placeholder="Loading token..."></textarea>
+      <!-- Tab 1: Client ID + Client Secret -->
+      <div id="tab-client-secret" class="tab-content">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Client Secret (from Kubernetes Secret)
+          </label>
+          <input
+            id="client-secret-input"
+            type="text"
+            readonly
+            class="w-full font-mono text-sm p-3 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none"
+            placeholder="Loading client secret...">
+        </div>
+        <div class="mb-4">
+          <button
+            id="login-btn"
+            class="px-5 py-2 rounded text-white text-sm font-medium transition-colors"
+            style="background-color: var(--kc-accent);">
+            Login with Keycloak
+          </button>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Decoded Access Token
+          </label>
+          <textarea
+            id="token-display"
+            readonly
+            rows="20"
+            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            placeholder="Token will appear here after login..."></textarea>
+        </div>
       </div>
+
+      <!-- Tab 2: Signed JWTs and User Auth -->
+      <div id="tab-user-auth" class="tab-content hidden">
+        <p class="text-gray-600 text-sm">Signed JWTs and User Auth demo — coming soon.</p>
+      </div>
+
+      <!-- Tab 3: Signed JWT and Client Auth -->
+      <div id="tab-client-auth" class="tab-content hidden">
+        <p class="text-gray-600 text-sm">Signed JWT and Client Auth demo — coming soon.</p>
+      </div>
+
     </main>
 
   </div>
@@ -125,6 +157,10 @@
         // Update title
         document.getElementById('page-title').textContent = 'Hello World - ' + tabs[tabKey];
 
+        // Show/hide tab content
+        document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
+        document.getElementById('tab-' + tabKey).classList.remove('hidden');
+
         // Close sidebar on mobile after selection
         if (window.innerWidth < 768) {
           document.getElementById('sidebar').classList.add('hidden');
@@ -146,62 +182,99 @@
       sidebar.classList.toggle('flex');
     });
 
-    // --- Base64url decode ---
+    // --- Base64url decode (UTF-8 safe) ---
     function base64urlDecode(str) {
-      // Replace base64url chars with standard base64
       let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-      // Pad with '='
-      while (base64.length % 4 !== 0) {
-        base64 += '=';
-      }
-      return atob(base64);
+      while (base64.length % 4 !== 0) base64 += '=';
+      const binary = atob(base64);
+      const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
     }
 
-    // --- Fetch and decode token ---
-    async function fetchToken() {
-      const display = document.getElementById('token-display');
+    // --- Tab 1: Client ID + Client Secret (Authorization Code flow) ---
+    const KEYCLOAK_URL = 'http://keycloak.127.0.0.1.nip.io';
+    const REALM = 'kubernetes';
+    const CLIENT_ID = 'client-secret';
+    const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+    async function fetchClientSecret() {
+      const input = document.getElementById('client-secret-input');
+      const response = await fetch('/api/client-secret');
+      if (!response.ok) throw new Error('Failed to fetch client secret (HTTP ' + response.status + ')');
+      const secret = (await response.text()).trim();
+      input.value = secret;
+      return secret;
+    }
+
+    function triggerLogin() {
+      const authUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
+      authUrl.searchParams.set('client_id', CLIENT_ID);
+      authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', 'openid');
+      window.location.href = authUrl.toString();
+    }
+
+    async function handleAuthCallback(code, secret) {
+      const tokenEndpoint = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`;
+      const body = new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: CLIENT_ID,
+        client_secret: secret,
+        code: code,
+        redirect_uri: REDIRECT_URI,
+      });
+
+      const response = await fetch(tokenEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error('Token exchange failed: ' + errText);
+      }
+
+      const data = await response.json();
+      const accessToken = data.access_token;
+
+      const parts = accessToken.split('.');
+      if (parts.length !== 3) throw new Error('Invalid JWT format');
+
+      const header = JSON.parse(base64urlDecode(parts[0]));
+      const payload = JSON.parse(base64urlDecode(parts[1]));
+
+      document.getElementById('token-display').value = JSON.stringify({ header, payload }, null, 2);
+
+      // Clean up URL
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+
+    async function initTab1() {
       const errorBanner = document.getElementById('error-banner');
       const errorMessage = document.getElementById('error-message');
 
       try {
-        const response = await fetch('/api/token');
-        if (!response.ok) {
-          throw new Error('Failed to fetch token (HTTP ' + response.status + ')');
-        }
-
-        const raw = (await response.text()).trim();
-        const parts = raw.split('.');
-        if (parts.length !== 3) {
-          throw new Error('Invalid JWT format: expected 3 parts, got ' + parts.length);
-        }
-
-        const header = JSON.parse(base64urlDecode(parts[0]));
-        const payload = JSON.parse(base64urlDecode(parts[1]));
-
-        const decoded = {
-          header: header,
-          payload: payload,
-        };
-
-        display.value = JSON.stringify(decoded, null, 2);
+        const secret = await fetchClientSecret();
         errorBanner.classList.add('hidden');
+
+        // Check for auth code in URL
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        if (code) {
+          await handleAuthCallback(code, secret);
+        }
       } catch (err) {
-        display.value = '';
         errorMessage.textContent = err.message;
         errorBanner.classList.remove('hidden');
       }
     }
 
-    // Fetch token on page load
-    fetchToken();
+    document.getElementById('login-btn').addEventListener('click', triggerLogin);
 
-    // keycloak-js adapter loaded and available as window.Keycloak
-    // Will be configured per-tab for different auth flows:
-    // const keycloak = new Keycloak({
-    //   url: 'https://keycloak.127.0.0.1.nip.io',
-    //   realm: 'kubernetes',
-    //   clientId: 'myclient'
-    // });
+    initTab1();
   </script>
 
 </body>

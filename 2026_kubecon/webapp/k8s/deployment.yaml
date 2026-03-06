@@ -24,6 +24,9 @@ spec:
         - mountPath: /var/run/secrets/tokens
           name: kc-token
           readOnly: true
+        - mountPath: /var/run/secrets/client
+          name: client-secret
+          readOnly: true
       volumes:
       - name: kc-token
         projected:
@@ -32,3 +35,6 @@ spec:
               path: kctoken
               expirationSeconds: 600
               audience: https://keycloak.127.0.0.1.nip.io/realms/kubernetes
+      - name: client-secret
+        secret:
+          secretName: webapp-client-secret

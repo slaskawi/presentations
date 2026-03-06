@@ -23,20 +23,36 @@ fi
 # Always ensure tunnel is running on macOS (not just on fresh start)
 if [[ "$(uname -s)" == "Darwin" ]]; then
   echo "Checking minikube tunnel..."
-  if ! pgrep -f "minikube tunnel" >/dev/null; then
-    echo "Minikube tunnel is not running. Starting it..."
-    sudo -v  # Cache sudo credentials interactively before backgrounding
-    nohup sudo -n minikube tunnel --cleanup > ./minikube-tunnel.log 2>&1 &
-    echo "Waiting for tunnel to establish..."
-    COUNT=0
-    while [ $COUNT -lt 30 ] && ! nc -z 127.0.0.1 80 2>/dev/null; do
-      echo -n "."
-      sleep 2
-      COUNT=$((COUNT+1))
-    done
-    echo ""
+
+  # Patch ingress-nginx-controller to LoadBalancer so minikube tunnel can route it
+  echo "Patching ingress-nginx-controller to LoadBalancer..."
+  PATCH_COUNT=0
+  until kubectl patch svc ingress-nginx-controller -n ingress-nginx -p '{"spec":{"type":"LoadBalancer"}}' 2>/dev/null; do
+    PATCH_COUNT=$((PATCH_COUNT+1))
+    if [ $PATCH_COUNT -ge 15 ]; then break; fi
+    echo -n "."
+    sleep 2
+  done
+  echo ""
+
+  # Start a new tunnel if port 80 is not yet accessible
+  if ! nc -z 127.0.0.1 80 2>/dev/null; then
+    echo "Starting minikube tunnel..."
+    if sudo -v 2>/dev/null; then
+      nohup sudo -n minikube tunnel --cleanup > ./minikube-tunnel.log 2>&1 &
+      echo "Waiting for tunnel to establish (127.0.0.1:80)..."
+      COUNT=0
+      while [ $COUNT -lt 30 ] && ! nc -z 127.0.0.1 80 2>/dev/null; do
+        echo -n "."
+        sleep 2
+        COUNT=$((COUNT+1))
+      done
+      echo ""
+    else
+      echo "WARNING: sudo not available — run 'sudo minikube tunnel --cleanup' manually in another terminal, then re-run this script."
+    fi
   else
-    echo "Minikube tunnel is running."
+    echo "Minikube tunnel is running (port 80 accessible)."
   fi
 fi
 
@@ -68,6 +84,7 @@ kubectl delete secret example-tls-secret -n $NAMESPACE --ignore-not-found=true
 kubectl delete secret keycloak-admin-credentials.yaml -n $NAMESPACE --ignore-not-found=true
 kubectl apply -n keycloak -f example-tls-secret.yaml
 kubectl apply -n keycloak -f keycloak-admin-credentials.yaml
+kubectl apply -n keycloak -f webapp-client-secret.yaml
 
 # Apply Keycloak CR (create or update)
 cat <<EOF | kubectl apply -f -
@@ -98,6 +115,18 @@ spec:
       value: "admin"
     - name: KC_BOOTSTRAP_ADMIN_PASSWORD
       value: "admin"
+  unsupported:
+    podTemplate:
+      spec:
+        containers:
+          - volumeMounts:
+              - name: webapp-client-secret
+                mountPath: /mnt/secrets/webapp-client-secret
+                readOnly: true
+        volumes:
+          - name: webapp-client-secret
+            secret:
+              secretName: webapp-client-secret
   additionalOptions:
     - name: features
       value: client-auth-federated,kubernetes-service-accounts
@@ -193,6 +222,7 @@ echo "Login kcadm to Keycloak"
 
 KC_POD="${KEYCLOAK_NAME}-0"
 KCADMIN="kubectl exec "$KC_POD" -n "${NAMESPACE}" -- /opt/keycloak/bin/kcadm.sh"
+WEBAPP_CLIENT_SECRET=$(kubectl exec "$KC_POD" -n "$NAMESPACE" -- cat /mnt/secrets/webapp-client-secret/client-secret)
 
 KCADM_RETRY=0
 KCADM_MAX=12
@@ -215,6 +245,27 @@ if ! $KCADMIN get realms/kubernetes >/dev/null 2>&1; then
 
   echo "Create client authenticating with Kubernetes service account"
   $KCADMIN create clients -r kubernetes -s clientId=myclient -s serviceAccountsEnabled=true -s clientAuthenticatorType=federated-jwt -s attributes='{ "jwt.credential.issuer": "kubernetes", "jwt.credential.sub": "system:serviceaccount:keycloak:test-serviceaccount" }'
+
+  echo "Create confidential client-secret client (Authorization Code flow)"
+  $KCADMIN create clients -r kubernetes \
+    -s clientId=client-secret \
+    -s secret="$WEBAPP_CLIENT_SECRET" \
+    -s publicClient=false \
+    -s standardFlowEnabled=true \
+    -s serviceAccountsEnabled=false \
+    -s enabled=true \
+    -s protocol=openid-connect \
+    -s 'redirectUris=["http://demo.127.0.0.1.nip.io/*"]' \
+    -s 'webOrigins=["http://demo.127.0.0.1.nip.io"]'
+
+  echo "Create admin user in kubernetes realm"
+  $KCADMIN create users -r kubernetes \
+    -s username=admin \
+    -s enabled=true \
+    -s firstName=Sebastian \
+    -s 'lastName=Łaskawiec' \
+    -s email=sebastian.laskawiec@gmail.com
+  $KCADMIN set-password -r kubernetes --username admin --new-password admin
 else
   echo "Realm kubernetes already exists"
 fi
@@ -277,7 +328,7 @@ COUNT=0
 MAX_RETRIES=60
 until [ "$HTTP_CODE" -eq 200 ] || [ "$COUNT" -eq $MAX_RETRIES ]; do
   sleep 2
-  HTTP_CODE=$(curl -L -s --insecure -o /dev/null $KEYCLOAK_URL -w "%{http_code}")
+  HTTP_CODE=$(curl -L -s --insecure -o /dev/null $KEYCLOAK_URL -w "%{http_code}" 2>/dev/null || echo "000")
   echo -n "."
   ((COUNT++))
 done

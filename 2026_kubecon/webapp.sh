@@ -9,6 +9,7 @@ eval $(minikube docker-env)
 docker build -t ${IMAGE_NAME}:latest "${SCRIPT_DIR}/webapp"
 
 echo "--- Applying Kubernetes manifests ---"
+kubectl apply -n ${NAMESPACE} -f "${SCRIPT_DIR}/webapp-client-secret.yaml"
 kubectl apply -f "${SCRIPT_DIR}/webapp/k8s/serviceaccount.yaml"
 kubectl apply -f "${SCRIPT_DIR}/webapp/k8s/deployment.yaml"
 kubectl apply -f "${SCRIPT_DIR}/webapp/k8s/service.yaml"
