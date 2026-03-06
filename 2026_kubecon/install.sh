@@ -18,15 +18,25 @@ if minikube status >/dev/null 2>&1; then
 else
   minikube start
   minikube addons enable ingress
-  if [[ "$(uname -s)" == "Darwin" ]]; then
-    echo "Checking minikube tunnel..."
-    if ! pgrep -f "minikube tunnel" >/dev/null; then
-      echo "Minikube tunnel is not running. Starting it..."
-      nohup sudo minikube tunnel -c > ./minikube-tunnel.log 2>&1 &
-      sleep 5
-    else
-      echo "Minikube tunnel is running."
-    fi
+fi
+
+# Always ensure tunnel is running on macOS (not just on fresh start)
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  echo "Checking minikube tunnel..."
+  if ! pgrep -f "minikube tunnel" >/dev/null; then
+    echo "Minikube tunnel is not running. Starting it..."
+    sudo -v  # Cache sudo credentials interactively before backgrounding
+    nohup sudo -n minikube tunnel --cleanup > ./minikube-tunnel.log 2>&1 &
+    echo "Waiting for tunnel to establish..."
+    COUNT=0
+    while [ $COUNT -lt 30 ] && ! nc -z 127.0.0.1 80 2>/dev/null; do
+      echo -n "."
+      sleep 2
+      COUNT=$((COUNT+1))
+    done
+    echo ""
+  else
+    echo "Minikube tunnel is running."
   fi
 fi
 
@@ -184,7 +194,17 @@ echo "Login kcadm to Keycloak"
 KC_POD="${KEYCLOAK_NAME}-0"
 KCADMIN="kubectl exec "$KC_POD" -n "${NAMESPACE}" -- /opt/keycloak/bin/kcadm.sh"
 
-$KCADMIN config credentials --server http://localhost:8080 --realm master --user admin --password admin
+KCADM_RETRY=0
+KCADM_MAX=12
+until $KCADMIN config credentials --server http://localhost:8080 --realm master --user admin --password admin; do
+  KCADM_RETRY=$((KCADM_RETRY+1))
+  if [ $KCADM_RETRY -ge $KCADM_MAX ]; then
+    echo "Timed out waiting for Keycloak to be ready for kcadm"
+    exit 1
+  fi
+  echo -n "."
+  sleep 5
+done
 
 if ! $KCADMIN get realms/kubernetes >/dev/null 2>&1; then
   echo "Create demo kubernetes realm"
@@ -235,6 +255,8 @@ spec:
           audience: $KEYCLOAK_URL/realms/kubernetes
 EOF
 
+echo "Waiting for test-pod to be ready..."
+kubectl wait --for=condition=Ready pod/test-pod -n $NAMESPACE --timeout=120s
 
 echo "-----------------------------------------------------------------------------"
 echo "5. Validation"
@@ -252,7 +274,7 @@ echo "Target URL: $KEYCLOAK_URL"
 # Wait for Ingress to be ready
 HTTP_CODE=0
 COUNT=0
-MAX_RETRIES=30
+MAX_RETRIES=60
 until [ "$HTTP_CODE" -eq 200 ] || [ "$COUNT" -eq $MAX_RETRIES ]; do
   sleep 2
   HTTP_CODE=$(curl -L -s --insecure -o /dev/null $KEYCLOAK_URL -w "%{http_code}")
