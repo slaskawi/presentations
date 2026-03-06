@@ -258,6 +258,19 @@ if ! $KCADMIN get realms/kubernetes >/dev/null 2>&1; then
     -s 'redirectUris=["http://demo.127.0.0.1.nip.io/*"]' \
     -s 'webOrigins=["http://demo.127.0.0.1.nip.io"]'
 
+  echo "Create federated-jwt client (Authorization Code + Kubernetes SA federated-jwt client auth)"
+  $KCADMIN create clients -r kubernetes \
+    -s clientId=federated-jwt \
+    -s publicClient=false \
+    -s standardFlowEnabled=true \
+    -s serviceAccountsEnabled=false \
+    -s enabled=true \
+    -s protocol=openid-connect \
+    -s clientAuthenticatorType=federated-jwt \
+    -s 'redirectUris=["http://demo.127.0.0.1.nip.io/*"]' \
+    -s 'webOrigins=["http://demo.127.0.0.1.nip.io"]' \
+    -s 'attributes={"jwt.credential.issuer":"kubernetes","jwt.credential.sub":"system:serviceaccount:keycloak:webapp-serviceaccount"}'
+
   echo "Create admin user in kubernetes realm"
   $KCADMIN create users -r kubernetes \
     -s username=admin \

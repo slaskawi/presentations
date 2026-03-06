@@ -34,7 +34,7 @@ spec:
           - serviceAccountToken:
               path: kctoken
               expirationSeconds: 600
-              audience: https://keycloak.127.0.0.1.nip.io/realms/kubernetes
+              audience: http://keycloak.127.0.0.1.nip.io/realms/kubernetes
       - name: client-secret
         secret:
           secretName: webapp-client-secret

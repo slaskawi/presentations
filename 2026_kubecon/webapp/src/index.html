@@ -95,12 +95,17 @@
             class="w-full font-mono text-sm p-3 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none"
             placeholder="Loading client secret...">
         </div>
-        <div class="mb-4">
+        <div class="mb-4 flex gap-3">
           <button
             id="login-btn"
             class="px-5 py-2 rounded text-white text-sm font-medium transition-colors"
             style="background-color: var(--kc-accent);">
             Login with Keycloak
+          </button>
+          <button
+            id="logout-btn"
+            class="px-5 py-2 rounded text-white text-sm font-medium transition-colors bg-red-600 hover:bg-red-700">
+            Logout
           </button>
         </div>
         <div>
@@ -118,7 +123,41 @@
 
       <!-- Tab 2: Signed JWTs and User Auth -->
       <div id="tab-user-auth" class="tab-content hidden">
-        <p class="text-gray-600 text-sm">Signed JWTs and User Auth demo — coming soon.</p>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Decoded Kubernetes Service Account Token
+          </label>
+          <textarea
+            id="federated-jwt-sa-token-display"
+            readonly
+            rows="20"
+            class="w-full font-mono text-sm p-3 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            placeholder="Loading Kubernetes SA token..."></textarea>
+        </div>
+        <div class="mb-4 flex gap-3">
+          <button
+            id="federated-jwt-login-btn"
+            class="px-5 py-2 rounded text-white text-sm font-medium transition-colors"
+            style="background-color: var(--kc-accent);">
+            Login with Keycloak
+          </button>
+          <button
+            id="federated-jwt-logout-btn"
+            class="px-5 py-2 rounded text-white text-sm font-medium transition-colors bg-red-600 hover:bg-red-700">
+            Logout
+          </button>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Decoded Access Token (from Keycloak)
+          </label>
+          <textarea
+            id="federated-jwt-token-display"
+            readonly
+            rows="20"
+            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            placeholder="Token will appear here after login..."></textarea>
+        </div>
       </div>
 
       <!-- Tab 3: Signed JWT and Client Auth -->
@@ -207,12 +246,26 @@
     }
 
     function triggerLogin() {
+      sessionStorage.setItem('activeLoginTab', 'client-secret');
       const authUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
       authUrl.searchParams.set('client_id', CLIENT_ID);
       authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', 'openid');
       window.location.href = authUrl.toString();
+    }
+
+    function triggerLogout() {
+      const idToken = sessionStorage.getItem('idToken_client-secret');
+      sessionStorage.removeItem('idToken_client-secret');
+      sessionStorage.setItem('activeTab', 'client-secret');
+      document.getElementById('token-display').value = '';
+      if (idToken) {
+        const logoutUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/logout`);
+        logoutUrl.searchParams.set('id_token_hint', idToken);
+        logoutUrl.searchParams.set('post_logout_redirect_uri', REDIRECT_URI);
+        window.location.href = logoutUrl.toString();
+      }
     }
 
     async function handleAuthCallback(code, secret) {
@@ -247,6 +300,9 @@
 
       document.getElementById('token-display').value = JSON.stringify({ header, payload }, null, 2);
 
+      // Store id_token for logout
+      if (data.id_token) sessionStorage.setItem('idToken_client-secret', data.id_token);
+
       // Clean up URL
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
@@ -263,8 +319,9 @@
         // Check for auth code in URL
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
-        if (code) {
+        if (code && sessionStorage.getItem('activeLoginTab') === 'client-secret') {
           await handleAuthCallback(code, secret);
+          sessionStorage.removeItem('activeLoginTab');
         }
       } catch (err) {
         errorMessage.textContent = err.message;
@@ -273,8 +330,122 @@
     }
 
     document.getElementById('login-btn').addEventListener('click', triggerLogin);
+    document.getElementById('logout-btn').addEventListener('click', triggerLogout);
+
+    // --- Tab 2: Signed JWTs and User Auth (Kubernetes SA token as client_assertion) ---
+    const FEDERATED_JWT_CLIENT_ID = 'federated-jwt';
+
+    async function fetchSaToken() {
+      const resp = await fetch('/api/token');
+      if (!resp.ok) throw new Error('Failed to load SA token (HTTP ' + resp.status + ')');
+      const token = (await resp.text()).trim();
+
+      const parts = token.split('.');
+      if (parts.length !== 3) throw new Error('Invalid SA token format');
+      const header  = JSON.parse(base64urlDecode(parts[0]));
+      const payload = JSON.parse(base64urlDecode(parts[1]));
+
+      document.getElementById('federated-jwt-sa-token-display').value =
+        JSON.stringify({ header, payload }, null, 2);
+
+      return token;
+    }
+
+    function triggerFederatedJwtLogin() {
+      sessionStorage.setItem('activeLoginTab', 'user-auth');
+      const authUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
+      authUrl.searchParams.set('client_id', FEDERATED_JWT_CLIENT_ID);
+      authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', 'openid');
+      window.location.href = authUrl.toString();
+    }
+
+    function triggerFederatedJwtLogout() {
+      const idToken = sessionStorage.getItem('idToken_user-auth');
+      sessionStorage.removeItem('idToken_user-auth');
+      sessionStorage.setItem('activeTab', 'user-auth');
+      document.getElementById('federated-jwt-token-display').value = '';
+      if (idToken) {
+        const logoutUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/logout`);
+        logoutUrl.searchParams.set('id_token_hint', idToken);
+        logoutUrl.searchParams.set('post_logout_redirect_uri', REDIRECT_URI);
+        window.location.href = logoutUrl.toString();
+      }
+    }
+
+    async function handleFederatedJwtCallback(code, saToken) {
+      const body = new URLSearchParams({
+        grant_type:            'authorization_code',
+        code:                  code,
+        client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+        client_assertion:      saToken,
+        redirect_uri:          REDIRECT_URI,
+      });
+
+      const response = await fetch(
+        `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`,
+        { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body }
+      );
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error('Token exchange failed: ' + err);
+      }
+
+      const data = await response.json();
+      const parts = data.access_token.split('.');
+      if (parts.length !== 3) throw new Error('Invalid JWT format');
+
+      const header  = JSON.parse(base64urlDecode(parts[0]));
+      const payload = JSON.parse(base64urlDecode(parts[1]));
+
+      document.getElementById('federated-jwt-token-display').value =
+        JSON.stringify({ header, payload }, null, 2);
+
+      // Store id_token for logout
+      if (data.id_token) sessionStorage.setItem('idToken_user-auth', data.id_token);
+
+      window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+    }
+
+    async function initTab2() {
+      const errorBanner  = document.getElementById('error-banner');
+      const errorMessage = document.getElementById('error-message');
+      try {
+        const saToken = await fetchSaToken();
+        errorBanner.classList.add('hidden');
+
+        document.getElementById('federated-jwt-login-btn')
+          .addEventListener('click', triggerFederatedJwtLogin);
+        document.getElementById('federated-jwt-logout-btn')
+          .addEventListener('click', triggerFederatedJwtLogout);
+
+        const params = new URLSearchParams(window.location.search);
+        const code   = params.get('code');
+        if (code && sessionStorage.getItem('activeLoginTab') === 'user-auth') {
+          await handleFederatedJwtCallback(code, saToken);
+          sessionStorage.removeItem('activeLoginTab');
+        }
+      } catch (err) {
+        errorMessage.textContent = err.message;
+        errorBanner.classList.remove('hidden');
+      }
+    }
+
+    // Restore the active tab after Keycloak login or logout redirect
+    const _loginTab = sessionStorage.getItem('activeLoginTab');
+    const _activeTab = sessionStorage.getItem('activeTab');
+    const _hasCode = new URLSearchParams(window.location.search).get('code');
+    const _tabToRestore = (_hasCode && _loginTab) ? _loginTab : (!_hasCode && _activeTab) ? _activeTab : null;
+    if (_tabToRestore) {
+      const navItem = document.querySelector(`.nav-item[data-tab="${_tabToRestore}"]`);
+      if (navItem) navItem.click();
+      sessionStorage.removeItem('activeTab');
+    }
 
     initTab1();
+    initTab2();
   </script>
 
 </body>
