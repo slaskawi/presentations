@@ -20,8 +20,15 @@ else
   minikube addons enable ingress
 fi
 
-# Always ensure tunnel is running on macOS (not just on fresh start)
+echo "Waiting for ingress controller to be ready..."
+kubectl wait --namespace ingress-nginx \
+  --for=condition=Available deployment/ingress-nginx-controller \
+  --timeout=120s
+
+# On macOS, minikube runs in a VM — we need a tunnel to reach Ingress on 127.0.0.1.
+# On Linux with the docker driver, the minikube network is directly routable.
 if [[ "$(uname -s)" == "Darwin" ]]; then
+  HOST_IP="127.0.0.1"
   echo "Checking minikube tunnel..."
 
   # Patch ingress-nginx-controller to LoadBalancer so minikube tunnel can route it
@@ -54,9 +61,12 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   else
     echo "Minikube tunnel is running (port 80 accessible)."
   fi
+else
+  HOST_IP="$(minikube ip)"
+  echo "Linux detected — using minikube IP: $HOST_IP"
 fi
 
-HOST_IP="127.0.0.1"
+export HOST_IP
 
 echo "-----------------------------------------------------------------------------"
 echo "2. Installing Keycloak Operator"
@@ -255,8 +265,8 @@ if ! $KCADMIN get realms/kubernetes >/dev/null 2>&1; then
     -s serviceAccountsEnabled=false \
     -s enabled=true \
     -s protocol=openid-connect \
-    -s 'redirectUris=["http://demo.127.0.0.1.nip.io/*"]' \
-    -s 'webOrigins=["http://demo.127.0.0.1.nip.io"]'
+    -s "redirectUris=[\"http://demo.${HOST_IP}.nip.io/*\"]" \
+    -s "webOrigins=[\"http://demo.${HOST_IP}.nip.io\"]"
 
   echo "Create federated-jwt client (Authorization Code + Kubernetes SA federated-jwt client auth)"
   $KCADMIN create clients -r kubernetes \
@@ -267,8 +277,8 @@ if ! $KCADMIN get realms/kubernetes >/dev/null 2>&1; then
     -s enabled=true \
     -s protocol=openid-connect \
     -s clientAuthenticatorType=federated-jwt \
-    -s 'redirectUris=["http://demo.127.0.0.1.nip.io/*"]' \
-    -s 'webOrigins=["http://demo.127.0.0.1.nip.io"]' \
+    -s "redirectUris=[\"http://demo.${HOST_IP}.nip.io/*\"]" \
+    -s "webOrigins=[\"http://demo.${HOST_IP}.nip.io\"]" \
     -s 'attributes={"jwt.credential.issuer":"kubernetes","jwt.credential.sub":"system:serviceaccount:keycloak:webapp-serviceaccount"}'
 
   echo "Create admin user in kubernetes realm"
@@ -343,7 +353,7 @@ until [ "$HTTP_CODE" -eq 200 ] || [ "$COUNT" -eq $MAX_RETRIES ]; do
   sleep 2
   HTTP_CODE=$(curl -L -s --insecure -o /dev/null $KEYCLOAK_URL -w "%{http_code}" 2>/dev/null || echo "000")
   echo -n "."
-  ((COUNT++))
+  COUNT=$(($COUNT + 1))
 done
 echo ""
 
@@ -380,4 +390,4 @@ fi
 echo ""
 echo "Keycloak available at $KEYCLOAK_URL"
 echo "Admin credentials are admin/admin"
-echo "Demo available at: http://demo.127.0.0.1.nip.io"
+echo "Demo available at: http://demo.${HOST_IP}.nip.io"
