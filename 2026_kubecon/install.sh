@@ -273,7 +273,7 @@ if ! $KCADMIN get realms/kubernetes >/dev/null 2>&1; then
     -s clientId=federated-jwt \
     -s publicClient=false \
     -s standardFlowEnabled=true \
-    -s serviceAccountsEnabled=false \
+    -s serviceAccountsEnabled=true \
     -s enabled=true \
     -s protocol=openid-connect \
     -s clientAuthenticatorType=federated-jwt \

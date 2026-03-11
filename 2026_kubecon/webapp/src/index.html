@@ -160,9 +160,38 @@
         </div>
       </div>
 
-      <!-- Tab 3: Signed JWT and Client Auth -->
+      <!-- Tab 3: Signed JWT and Client Auth (Client Credentials) -->
       <div id="tab-client-auth" class="tab-content hidden">
-        <p class="text-gray-600 text-sm">Signed JWT and Client Auth demo — coming soon.</p>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Decoded Kubernetes Service Account Token
+          </label>
+          <textarea
+            id="client-auth-sa-token-display"
+            readonly
+            rows="20"
+            class="w-full font-mono text-sm p-3 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            placeholder="Loading Kubernetes SA token..."></textarea>
+        </div>
+        <div class="mb-4 flex gap-3">
+          <button
+            id="client-auth-get-token-btn"
+            class="px-5 py-2 rounded text-white text-sm font-medium transition-colors"
+            style="background-color: var(--kc-accent);">
+            Get Access Token
+          </button>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Decoded Access Token (from Keycloak)
+          </label>
+          <textarea
+            id="client-auth-token-display"
+            readonly
+            rows="20"
+            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            placeholder="Token will appear here after requesting access token..."></textarea>
+        </div>
       </div>
 
     </main>
@@ -433,6 +462,76 @@
       }
     }
 
+    // --- Tab 3: Signed JWT and Client Auth (Client Credentials grant) ---
+    async function fetchClientAuthSaToken() {
+      const resp = await fetch('/api/token');
+      if (!resp.ok) throw new Error('Failed to load SA token (HTTP ' + resp.status + ')');
+      const token = (await resp.text()).trim();
+
+      const parts = token.split('.');
+      if (parts.length !== 3) throw new Error('Invalid SA token format');
+      const header  = JSON.parse(base64urlDecode(parts[0]));
+      const payload = JSON.parse(base64urlDecode(parts[1]));
+
+      document.getElementById('client-auth-sa-token-display').value =
+        JSON.stringify({ header, payload }, null, 2);
+
+      return token;
+    }
+
+    async function getClientCredentialsToken(saToken) {
+      const errorBanner  = document.getElementById('error-banner');
+      const errorMessage = document.getElementById('error-message');
+
+      try {
+        const body = new URLSearchParams({
+          grant_type:            'client_credentials',
+          client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+          client_assertion:      saToken,
+        });
+
+        const response = await fetch(
+          `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`,
+          { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body }
+        );
+
+        if (!response.ok) {
+          const err = await response.text();
+          throw new Error('Client credentials token request failed: ' + err);
+        }
+
+        const data  = await response.json();
+        const parts = data.access_token.split('.');
+        if (parts.length !== 3) throw new Error('Invalid JWT format');
+
+        const header  = JSON.parse(base64urlDecode(parts[0]));
+        const payload = JSON.parse(base64urlDecode(parts[1]));
+
+        document.getElementById('client-auth-token-display').value =
+          JSON.stringify({ header, payload }, null, 2);
+
+        errorBanner.classList.add('hidden');
+      } catch (err) {
+        errorMessage.textContent = err.message;
+        errorBanner.classList.remove('hidden');
+      }
+    }
+
+    async function initTab3() {
+      const errorBanner  = document.getElementById('error-banner');
+      const errorMessage = document.getElementById('error-message');
+      try {
+        const saToken = await fetchClientAuthSaToken();
+        errorBanner.classList.add('hidden');
+
+        document.getElementById('client-auth-get-token-btn')
+          .addEventListener('click', () => getClientCredentialsToken(saToken));
+      } catch (err) {
+        errorMessage.textContent = err.message;
+        errorBanner.classList.remove('hidden');
+      }
+    }
+
     // Restore the active tab after Keycloak login or logout redirect
     const _loginTab = sessionStorage.getItem('activeLoginTab');
     const _activeTab = sessionStorage.getItem('activeTab');
@@ -446,6 +545,7 @@
 
     initTab1();
     initTab2();
+    initTab3();
   </script>
 
 </body>
