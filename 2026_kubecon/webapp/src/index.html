@@ -5,10 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Keycloak Signed JWT - KubeCon 2026 Demo</title>
   <link rel="stylesheet" href="/tailwind.css">
+  <link rel="stylesheet" href="/prism-theme.css">
+  <script src="/prism.js"></script>
   <script type="module">
     // Make keycloak-js available globally for future OAuth integration
     import Keycloak from '/keycloak.min.js';
     window.Keycloak = Keycloak;
+  </script>
+  <script src="/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#e8f4fd',
+        primaryBorderColor: '#4d9bd4',
+        primaryTextColor: '#1b1d21',
+        lineColor: '#4d9bd4',
+        secondaryColor: '#f0f0f0',
+        tertiaryColor: '#ffffff',
+        actorBkg: '#1b1d21',
+        actorTextColor: '#ffffff',
+        actorBorder: '#4d9bd4',
+        actorLineColor: '#8b8d8f',
+        signalColor: '#1b1d21',
+        signalTextColor: '#1b1d21',
+        noteBkgColor: '#fff3cd',
+        noteTextColor: '#664d03',
+        noteBorderColor: '#ffecb5',
+        activationBkgColor: '#e8f4fd',
+        activationBorderColor: '#4d9bd4',
+        sequenceNumberColor: '#ffffff',
+      },
+      sequence: {
+        mirrorActors: false,
+        messageMargin: 50,
+        actorMargin: 100,
+        noteMargin: 15,
+      }
+    });
   </script>
   <style>
     /* Keycloak Admin Console color palette */
@@ -19,6 +54,17 @@
       --kc-accent: #4d9bd4;
       --kc-content-bg: #f0f0f0;
       --kc-section-label: #8b8d8f;
+    }
+    .mermaid svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+    .code-card pre[class*="language-"] {
+      margin: 0;
+      border-radius: 0;
+      font-size: 0.875rem;
     }
   </style>
 </head>
@@ -84,6 +130,74 @@
 
       <!-- Tab 1: Client ID + Client Secret -->
       <div id="tab-client-secret" class="tab-content">
+        <div class="mb-6 bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Authentication Flow</span>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as Web App
+    participant KC as Keycloak
+    participant K8s as K8s Secret
+
+    rect rgba(77, 155, 212, 0.08)
+        App->>K8s: Fetch client_secret
+        K8s-->>App: client_secret value
+    end
+
+    rect rgba(255, 193, 7, 0.08)
+        User->>App: Click Login
+        App->>KC: Authorization Request (response_type=code)
+        KC->>User: Login Page
+        User->>KC: Username + Password
+        KC-->>App: Authorization Code
+    end
+
+    rect rgba(40, 167, 69, 0.08)
+        App->>KC: POST /token (authorization_code + client_secret)
+        KC->>KC: Validate client_secret
+        KC-->>App: Access Token + ID Token
+    end
+
+    App->>App: Decode and display JWT
+            </pre>
+          </div>
+        </div>
+        <div class="mb-6 bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden code-card">
+          <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Webapp Code</span>
+          </div>
+          <pre class="language-javascript"><code class="language-javascript">// 1. Fetch client secret from Kubernetes Secret (mounted volume)
+const secret = await fetch('/api/client-secret').then(r => r.text());
+
+// 2. Redirect user to Keycloak for authentication
+const authUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
+authUrl.searchParams.set('client_id', CLIENT_ID);
+authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
+authUrl.searchParams.set('response_type', 'code');
+authUrl.searchParams.set('scope', 'openid');
+window.location.href = authUrl.toString();
+
+// 3. Exchange authorization code for tokens using client_secret
+const body = new URLSearchParams({
+    grant_type:    'authorization_code',
+    client_id:     CLIENT_ID,
+    client_secret: secret,
+    code:          code,
+    redirect_uri:  REDIRECT_URI,
+});
+
+const response = await fetch(tokenEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+});
+
+const { access_token, id_token } = await response.json();</code></pre>
+        </div>
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Client Secret (from Kubernetes Secret)
@@ -115,14 +229,86 @@
           <textarea
             id="token-display"
             readonly
-            rows="20"
-            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            rows="2"
+            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-none overflow-hidden auto-resize"
             placeholder="Token will appear here after login..."></textarea>
         </div>
       </div>
 
       <!-- Tab 2: Signed JWTs and User Auth -->
       <div id="tab-user-auth" class="tab-content hidden">
+        <div class="mb-6 bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Authentication Flow</span>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as Web App
+    participant KC as Keycloak
+    participant K8s as K8s API Server
+
+    rect rgba(77, 155, 212, 0.08)
+        App->>K8s: Fetch projected SA token
+        K8s-->>App: Kubernetes SA JWT
+    end
+
+    rect rgba(255, 193, 7, 0.08)
+        User->>App: Click Login
+        App->>KC: Authorization Request (response_type=code)
+        KC->>User: Login Page
+        User->>KC: Username + Password
+        KC-->>App: Authorization Code
+    end
+
+    rect rgba(40, 167, 69, 0.08)
+        App->>KC: POST /token (authorization_code + client_assertion=SA JWT)
+        KC->>K8s: Fetch JWKS via OIDC Discovery
+        K8s-->>KC: Public signing keys
+        Note over User,K8s: No client_secret needed!
+        KC->>KC: Validate JWT signature + claims
+        KC-->>App: Access Token + ID Token
+    end
+
+    App->>App: Decode and display JWT
+            </pre>
+          </div>
+        </div>
+        <div class="mb-6 bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden code-card">
+          <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Webapp Code</span>
+          </div>
+          <pre class="language-javascript"><code class="language-javascript">// 1. Fetch Kubernetes Service Account token (projected volume)
+const saToken = await fetch('/api/token').then(r => r.text());
+
+// 2. Redirect user to Keycloak for authentication
+const authUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
+authUrl.searchParams.set('client_id', FEDERATED_JWT_CLIENT_ID);
+authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
+authUrl.searchParams.set('response_type', 'code');
+authUrl.searchParams.set('scope', 'openid');
+window.location.href = authUrl.toString();
+
+// 3. Exchange authorization code using K8s SA JWT as client assertion
+//    (NO client_secret needed!)
+const body = new URLSearchParams({
+    grant_type:            'authorization_code',
+    code:                  code,
+    client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+    client_assertion:      saToken,
+    redirect_uri:          REDIRECT_URI,
+});
+
+const response = await fetch(tokenEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+});
+
+const { access_token, id_token } = await response.json();</code></pre>
+        </div>
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Decoded Kubernetes Service Account Token
@@ -130,8 +316,8 @@
           <textarea
             id="federated-jwt-sa-token-display"
             readonly
-            rows="20"
-            class="w-full font-mono text-sm p-3 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            rows="2"
+            class="w-full font-mono text-sm p-3 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-none overflow-hidden auto-resize"
             placeholder="Loading Kubernetes SA token..."></textarea>
         </div>
         <div class="mb-4 flex gap-3">
@@ -154,14 +340,67 @@
           <textarea
             id="federated-jwt-token-display"
             readonly
-            rows="20"
-            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            rows="2"
+            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-none overflow-hidden auto-resize"
             placeholder="Token will appear here after login..."></textarea>
         </div>
       </div>
 
       <!-- Tab 3: Signed JWT and Client Auth (Client Credentials) -->
       <div id="tab-client-auth" class="tab-content hidden">
+        <div class="mb-6 bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Authentication Flow</span>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant App as Web App
+    participant KC as Keycloak
+    participant K8s as K8s API Server
+
+    rect rgba(77, 155, 212, 0.08)
+        App->>K8s: Fetch projected SA token
+        K8s-->>App: Kubernetes SA JWT
+    end
+
+    rect rgba(40, 167, 69, 0.08)
+        App->>KC: POST /token (client_credentials + client_assertion=SA JWT)
+        KC->>K8s: Fetch JWKS via OIDC Discovery
+        K8s-->>KC: Public signing keys
+        Note over App,K8s: No client_secret!
+        KC->>KC: Validate JWT signature + claims
+        KC-->>App: Access Token
+    end
+
+    App->>App: Decode and display JWT
+            </pre>
+          </div>
+        </div>
+        <div class="mb-6 bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden code-card">
+          <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Webapp Code</span>
+          </div>
+          <pre class="language-javascript"><code class="language-javascript">// 1. Fetch Kubernetes Service Account token (projected volume)
+const saToken = await fetch('/api/token').then(r => r.text());
+
+// 2. Request access token using Client Credentials grant
+//    (NO client_secret needed!)
+const body = new URLSearchParams({
+    grant_type:            'client_credentials',
+    client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+    client_assertion:      saToken,
+});
+
+const response = await fetch(tokenEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+});
+
+const { access_token } = await response.json();</code></pre>
+        </div>
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Decoded Kubernetes Service Account Token
@@ -169,8 +408,8 @@
           <textarea
             id="client-auth-sa-token-display"
             readonly
-            rows="20"
-            class="w-full font-mono text-sm p-3 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            rows="2"
+            class="w-full font-mono text-sm p-3 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-none overflow-hidden auto-resize"
             placeholder="Loading Kubernetes SA token..."></textarea>
         </div>
         <div class="mb-4 flex gap-3">
@@ -188,8 +427,8 @@
           <textarea
             id="client-auth-token-display"
             readonly
-            rows="20"
-            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-y"
+            rows="2"
+            class="w-full font-mono text-sm p-4 rounded border border-gray-300 bg-white text-gray-800 focus:outline-none resize-none overflow-hidden auto-resize"
             placeholder="Token will appear here after requesting access token..."></textarea>
         </div>
       </div>
@@ -199,6 +438,21 @@
   </div>
 
   <script>
+    // --- Auto-resize textareas to fit content ---
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+
+    // Patch .value setter on all auto-resize textareas so they resize on programmatic writes
+    document.querySelectorAll('textarea.auto-resize').forEach(ta => {
+      const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+      Object.defineProperty(ta, 'value', {
+        get() { return desc.get.call(this); },
+        set(v) { desc.set.call(this, v); autoResize(this); },
+      });
+    });
+
     // --- Tab data ---
     const tabs = {
       'client-secret': 'Client ID + Client Secret',
@@ -227,7 +481,11 @@
 
         // Show/hide tab content
         document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
-        document.getElementById('tab-' + tabKey).classList.remove('hidden');
+        const activeTab = document.getElementById('tab-' + tabKey);
+        activeTab.classList.remove('hidden');
+
+        // Re-measure textareas now that the tab is visible
+        activeTab.querySelectorAll('textarea.auto-resize').forEach(autoResize);
 
         // Close sidebar on mobile after selection
         if (window.innerWidth < 768) {

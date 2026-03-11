@@ -3,7 +3,7 @@ FROM node:20-alpine AS build
 WORKDIR /build
 
 # Install Tailwind CSS CLI and keycloak-js
-RUN npm install tailwindcss@3 keycloak-js@26
+RUN npm install tailwindcss@3 keycloak-js@26 mermaid@11 prismjs@1
 
 # Copy source files
 COPY tailwind.config.js ./
@@ -14,6 +14,9 @@ RUN npx tailwindcss -i ./src/input.css -o ./dist/tailwind.css --minify
 
 # Copy keycloak-js bundle to dist
 RUN cp ./node_modules/keycloak-js/lib/keycloak.js ./dist/keycloak.min.js
+RUN cp ./node_modules/mermaid/dist/mermaid.min.js ./dist/mermaid.min.js
+RUN cp ./node_modules/prismjs/prism.js ./dist/prism.js
+RUN cp ./node_modules/prismjs/themes/prism-tomorrow.css ./dist/prism-theme.css
 
 # --- Stage 2: Runtime ---
 FROM nginx:alpine
@@ -30,6 +33,9 @@ COPY src/index.html /usr/share/nginx/html/
 # Copy built assets from stage 1
 COPY --from=build /build/dist/tailwind.css /usr/share/nginx/html/
 COPY --from=build /build/dist/keycloak.min.js /usr/share/nginx/html/
+COPY --from=build /build/dist/mermaid.min.js /usr/share/nginx/html/
+COPY --from=build /build/dist/prism.js /usr/share/nginx/html/
+COPY --from=build /build/dist/prism-theme.css /usr/share/nginx/html/
 
 # Configure nginx to run as non-root on port 8080
 RUN sed -i '/user  nginx;/d' /etc/nginx/nginx.conf \
