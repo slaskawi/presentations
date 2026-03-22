@@ -265,8 +265,8 @@ if ! $KCADMIN get realms/kubernetes >/dev/null 2>&1; then
     -s serviceAccountsEnabled=false \
     -s enabled=true \
     -s protocol=openid-connect \
-    -s "redirectUris=[\"http://demo.${HOST_IP}.nip.io/*\"]" \
-    -s "webOrigins=[\"http://demo.${HOST_IP}.nip.io\"]"
+    -s "redirectUris=[\"http://demo.${HOST_IP}.nip.io/*\",\"https://demo.${HOST_IP}.nip.io/*\"]" \
+    -s "webOrigins=[\"http://demo.${HOST_IP}.nip.io\",\"https://demo.${HOST_IP}.nip.io\"]"
 
   echo "Create federated-jwt client (Authorization Code + Kubernetes SA federated-jwt client auth)"
   $KCADMIN create clients -r kubernetes \
@@ -277,8 +277,8 @@ if ! $KCADMIN get realms/kubernetes >/dev/null 2>&1; then
     -s enabled=true \
     -s protocol=openid-connect \
     -s clientAuthenticatorType=federated-jwt \
-    -s "redirectUris=[\"http://demo.${HOST_IP}.nip.io/*\"]" \
-    -s "webOrigins=[\"http://demo.${HOST_IP}.nip.io\"]" \
+    -s "redirectUris=[\"http://demo.${HOST_IP}.nip.io/*\",\"https://demo.${HOST_IP}.nip.io/*\"]" \
+    -s "webOrigins=[\"http://demo.${HOST_IP}.nip.io\",\"https://demo.${HOST_IP}.nip.io\"]" \
     -s 'attributes={"jwt.credential.issuer":"kubernetes","jwt.credential.sub":"system:serviceaccount:keycloak:webapp-serviceaccount"}'
 
   echo "Create admin user in kubernetes realm"
