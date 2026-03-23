@@ -390,4 +390,4 @@ fi
 echo ""
 echo "Keycloak available at $KEYCLOAK_URL"
 echo "Admin credentials are admin/admin"
-echo "Demo available at: http://demo.${HOST_IP}.nip.io"
+echo "Demo available at: https://demo.${HOST_IP}.nip.io"

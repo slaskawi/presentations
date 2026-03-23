@@ -518,7 +518,7 @@ const { access_token } = await response.json();</code></pre>
     }
 
     // --- Tab 1: Client ID + Client Secret (Authorization Code flow) ---
-    const KEYCLOAK_URL = 'http://keycloak.127.0.0.1.nip.io';
+    const KEYCLOAK_URL = 'https://keycloak.127.0.0.1.nip.io';
     const REALM = 'kubernetes';
     const CLIENT_ID = 'client-secret';
     const REDIRECT_URI = window.location.origin + window.location.pathname;
