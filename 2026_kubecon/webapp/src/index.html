@@ -15,7 +15,7 @@
   <script src="/mermaid.min.js"></script>
   <script>
     mermaid.initialize({
-      startOnLoad: true,
+      startOnLoad: false,
       theme: 'base',
       themeVariables: {
         primaryColor: '#e8f4fd',
@@ -43,6 +43,30 @@
         actorMargin: 100,
         noteMargin: 15,
       }
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      await mermaid.run();
+      // Fix vertical centering of text inside note boxes.
+      // Mermaid renders noteText with dy="1em" which pushes text toward the bottom.
+      // We remove dy and reposition y to the true center of the note rect.
+      document.querySelectorAll('.mermaid svg').forEach(svg => {
+        svg.querySelectorAll('rect.note').forEach(rect => {
+          const g = rect.parentElement;
+          if (!g) return;
+          const text = g.querySelector('text.noteText');
+          if (!text) return;
+          const ry = parseFloat(rect.getAttribute('y'));
+          const rh = parseFloat(rect.getAttribute('height'));
+          const centerY = ry + rh / 2;
+          text.setAttribute('y', centerY);
+          text.setAttribute('dy', '0');
+          text.setAttribute('dominant-baseline', 'central');
+          text.querySelectorAll('tspan').forEach(ts => {
+            ts.setAttribute('y', centerY);
+            ts.removeAttribute('dy');
+          });
+        });
+      });
     });
   </script>
   <style>
@@ -125,7 +149,7 @@
 
       <!-- Page title -->
       <h1 id="page-title" class="text-2xl font-semibold text-gray-900 mb-6">
-        Hello World - Client ID + Client Secret
+        Client ID + Client Secret
       </h1>
 
       <!-- Tab 1: Client ID + Client Secret -->
@@ -143,10 +167,6 @@ sequenceDiagram
     participant KC as Keycloak
     participant K8s as K8s Secret
 
-    rect rgba(77, 155, 212, 0.08)
-        App->>K8s: Fetch client_secret
-        K8s-->>App: client_secret value
-    end
 
     rect rgba(255, 193, 7, 0.08)
         User->>App: Click Login
@@ -154,6 +174,11 @@ sequenceDiagram
         KC->>User: Login Page
         User->>KC: Username + Password
         KC-->>App: Authorization Code
+    end
+
+    rect rgba(77, 155, 212, 0.08)
+        App->>K8s: Fetch client_secret
+        K8s-->>App: client_secret value
     end
 
     rect rgba(40, 167, 69, 0.08)
@@ -170,16 +195,17 @@ sequenceDiagram
           <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
             <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Webapp Code</span>
           </div>
-          <pre class="language-javascript"><code class="language-javascript">// 1. Fetch client secret from Kubernetes Secret (mounted volume)
-const secret = await fetch('/api/client-secret').then(r => r.text());
-
-// 2. Redirect user to Keycloak for authentication
+          <pre class="language-javascript"><code class="language-javascript">
+// 1. Redirect user to Keycloak for authentication
 const authUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
 authUrl.searchParams.set('client_id', CLIENT_ID);
 authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
 authUrl.searchParams.set('response_type', 'code');
 authUrl.searchParams.set('scope', 'openid');
 window.location.href = authUrl.toString();
+
+// 2. Fetch client secret from Kubernetes Secret (mounted volume)
+const secret = await fetch('/api/client-secret').then(r => r.text());
 
 // 3. Exchange authorization code for tokens using client_secret
 const body = new URLSearchParams({
@@ -250,17 +276,17 @@ sequenceDiagram
     participant KC as Keycloak
     participant K8s as K8s API Server
 
-    rect rgba(77, 155, 212, 0.08)
-        App->>K8s: Fetch projected SA token
-        K8s-->>App: Kubernetes SA JWT
-    end
-
     rect rgba(255, 193, 7, 0.08)
         User->>App: Click Login
         App->>KC: Authorization Request (response_type=code)
         KC->>User: Login Page
         User->>KC: Username + Password
         KC-->>App: Authorization Code
+    end
+
+    rect rgba(77, 155, 212, 0.08)
+        App->>K8s: Fetch projected SA token
+        K8s-->>App: Kubernetes SA JWT
     end
 
     rect rgba(40, 167, 69, 0.08)
@@ -280,16 +306,17 @@ sequenceDiagram
           <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
             <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Webapp Code</span>
           </div>
-          <pre class="language-javascript"><code class="language-javascript">// 1. Fetch Kubernetes Service Account token (projected volume)
-const saToken = await fetch('/api/token').then(r => r.text());
-
-// 2. Redirect user to Keycloak for authentication
+          <pre class="language-javascript"><code class="language-javascript">
+// 1. Redirect user to Keycloak for authentication
 const authUrl = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
 authUrl.searchParams.set('client_id', FEDERATED_JWT_CLIENT_ID);
 authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
 authUrl.searchParams.set('response_type', 'code');
 authUrl.searchParams.set('scope', 'openid');
 window.location.href = authUrl.toString();
+
+// 2. Fetch Kubernetes Service Account token (projected volume)
+const saToken = await fetch('/api/token').then(r => r.text());
 
 // 3. Exchange authorization code using K8s SA JWT as client assertion
 //    (NO client_secret needed!)
@@ -382,7 +409,8 @@ sequenceDiagram
           <div class="px-4 py-2 border-b border-gray-200 bg-gray-50">
             <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Webapp Code</span>
           </div>
-          <pre class="language-javascript"><code class="language-javascript">// 1. Fetch Kubernetes Service Account token (projected volume)
+          <pre class="language-javascript"><code class="language-javascript">
+// ś1. Fetch Kubernetes Service Account token (projected volume)
 const saToken = await fetch('/api/token').then(r => r.text());
 
 // 2. Request access token using Client Credentials grant
@@ -477,7 +505,7 @@ const { access_token } = await response.json();</code></pre>
         link.style.backgroundColor = 'var(--kc-sidebar-hover)';
 
         // Update title
-        document.getElementById('page-title').textContent = 'Hello World - ' + tabs[tabKey];
+        document.getElementById('page-title').textContent = tabs[tabKey];
 
         // Show/hide tab content
         document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
